@@ -179,6 +179,7 @@
             font-size: 12px;
             padding: 4px 8px;
             height: auto;
+            min-width: 80px;
         }
         
         .card-header .form-check-label {
@@ -187,6 +188,46 @@
         
         .card-header .form-label {
             font-size: 12px;
+        }
+        
+        /* 修复搜索区域对齐问题 */
+        .search-row {
+            align-items: end;
+        }
+        
+        .search-input-group {
+            display: flex;
+            align-items: end;
+            gap: 10px;
+        }
+        
+        .search-input-group .form-control {
+            flex: 1;
+        }
+        
+        .search-input-group .btn {
+            white-space: nowrap;
+            min-width: 80px;
+            flex-shrink: 0;
+            height: 38px; /* 统一按钮高度 */
+        }
+        
+        /* 修复下拉按钮重叠问题 */
+        .line-count-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 100px; /* 减少最小宽度，避免遮住倒序显示 */
+        }
+        
+        .line-count-container .form-select {
+            min-width: 100px; /* 减少下拉框最小宽度，避免遮住倒序显示 */
+        }
+        
+        /* 确保标签文字有足够空间 */
+        .line-count-container .form-label {
+            white-space: nowrap;
+            margin-right: 10px;
         }
     </style>
 </head>
@@ -236,24 +277,22 @@
                     <div class="card-body">
                         <!-- 搜索配置 -->
                         <div class="config-section">
-                            <div class="row align-items-end">
-                                <div class="col-md-8">
+                            <div class="row search-row">
+                                <div class="col-12">
                                     <label for="searchPattern" class="form-label">搜索模式</label>
-                                    <input type="text" class="form-control" id="searchPattern" 
-                                           placeholder="支持双引号精确匹配，反引号字面量，普通文本字面量，and/or连接"
-                                           onkeypress="onSearchKeyPress(event)"
-                                           oninput="onSearchInput()">
-                                    <small class="text-muted">例: "error message" `exception` database and "failed" 或 error exception</small>
-                                </div>
-                                <div class="col-md-2">
-                                    <button class="btn btn-primary w-100" onclick="searchLogs()">
-                                        <i class="bi bi-search"></i> 搜索
-                                    </button>
-                                </div>
-                                <div class="col-md-2">
-                                    <button class="btn btn-outline-secondary w-100" onclick="clearSearch()">
-                                        <i class="bi bi-x-circle"></i> 清除
-                                    </button>
+                                    <div class="search-input-group">
+                                        <input type="text" class="form-control" id="searchPattern" 
+                                               placeholder="支持双引号精确匹配，反引号字面量，普通文本字面量，and/or连接"
+                                               onkeypress="onSearchKeyPress(event)"
+                                               oninput="onSearchInput()">
+                                        <button class="btn btn-primary" onclick="searchLogs()">
+                                            <i class="bi bi-search"></i> 搜索
+                                        </button>
+                                        <button class="btn btn-primary" onclick="clearSearch()" style="background: #6c757d; border-color: #6c757d;">
+                                            <i class="bi bi-x-circle"></i> 清除
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">例: "error message" `exception` database and "failed" or error exception</small>
                                 </div>
                             </div>
                         </div>
@@ -268,9 +307,9 @@
                                 <i class="bi bi-file-text"></i> 日志内容
                             </h6>
                             <div class="d-flex align-items-center gap-3">
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="line-count-container">
                                     <label for="lineCount" class="form-label mb-0 text-white">显示行数:</label>
-                                    <select class="form-select form-select-sm" id="lineCount" onchange="onConfigChange()" style="width: auto;">
+                                    <select class="form-select form-select-sm" id="lineCount" onchange="onConfigChange()">
                                         <option value="100">100行</option>
                                         <option value="200" selected>200行</option>
                                         <option value="500">500行</option>
@@ -439,7 +478,7 @@
                     const directory = file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : '根目录';
                     console.log('处理文件:', file);
                     html += `
-                        <div class="file-item" onclick="selectFile('${file.path}')">
+                        <div class="file-item" onclick="selectFile('${file.path}', event)">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <strong>${file.name}</strong>
@@ -462,13 +501,13 @@
                 const firstFile = files[0];
                 if (firstFile && firstFile.path) {
                     console.log('自动选择第一个文件:', firstFile.path);
-                    selectFile(firstFile.path);
+                    selectFile(firstFile.path, null);
                 }
             }
         }
 
         // 选择文件
-        function selectFile(filePath) {
+        function selectFile(filePath, event) {
             console.log('选择文件:', filePath);
             currentFile = filePath;
             
@@ -476,7 +515,11 @@
             document.querySelectorAll('.file-item').forEach(item => {
                 item.classList.remove('active');
             });
-            event.currentTarget.classList.add('active');
+            
+            // 安全地添加active类
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
             
             // 加载日志内容
             refreshLogContent();
