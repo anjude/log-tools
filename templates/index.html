@@ -226,10 +226,10 @@
                                 <div class="col-md-6">
                                     <label for="searchPattern" class="form-label">搜索模式</label>
                                     <input type="text" class="form-control" id="searchPattern" 
-                                           placeholder="支持双引号包裹关键词，空格分割，and/or连接"
+                                           placeholder="支持双引号精确匹配，反引号字面量，普通文本字面量，and/or连接"
                                            onkeypress="onSearchKeyPress(event)"
                                            oninput="onSearchInput()">
-                                    <small class="text-muted">例: "error" "exception" and "failed"</small>
+                                    <small class="text-muted">例: "error message" `exception` database and "failed" 或 error exception</small>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">&nbsp;</label>
@@ -454,6 +454,7 @@
                 if (file && file.path && file.name) {
                     const size = formatFileSize(file.size || 0);
                     const modTime = file.mod_time || '未知时间';
+                    const directory = file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : '根目录';
                     console.log('处理文件:', file);
                     html += `
                         <div class="file-item" onclick="selectFile('${file.path}')">
@@ -462,6 +463,8 @@
                                     <strong>${file.name}</strong>
                                     <br>
                                     <small class="text-muted">${modTime}</small>
+                                    <br>
+                                    <small class="text-info">${directory}</small>
                                 </div>
                                 <span class="badge bg-secondary">${size}</span>
                             </div>
@@ -471,6 +474,15 @@
             });
             
             fileList.innerHTML = html;
+            
+            // 自动选择第一个文件
+            if (files.length > 0 && !currentFile) {
+                const firstFile = files[0];
+                if (firstFile && firstFile.path) {
+                    console.log('自动选择第一个文件:', firstFile.path);
+                    selectFile(firstFile.path);
+                }
+            }
         }
 
         // 选择文件
@@ -543,6 +555,10 @@
             
             logContent.innerHTML = '<div class="loading"><i class="bi bi-arrow-clockwise spin"></i> 加载中...</div>';
             
+            // 添加调试信息
+            console.log('当前文件路径:', currentFile);
+            console.log('编码后的文件路径:', encodeURIComponent(currentFile));
+            
             try {
                 const token = localStorage.getItem('authToken');
                 const response = await fetch(`/api/logs/content?file=${encodeURIComponent(currentFile)}&lines=${lineCount}&reverse=${reverseOrder}`, {
@@ -604,12 +620,8 @@
             const keywords = parseSearchPattern(currentSearchPattern);
             
             keywords.forEach(keyword => {
-                if (keyword.type === 'exact') {
-                    // 双引号包裹的精确匹配
-                    const regex = new RegExp(`(${escapeRegex(keyword.value)})`, 'gi');
-                    highlightedText = highlightedText.replace(regex, '<span class="highlight">$1</span>');
-                } else {
-                    // 普通关键词
+                if (keyword.type === 'exact' || keyword.type === 'literal') {
+                    // 双引号精确匹配、反引号字面量、普通文本字面量
                     const regex = new RegExp(`(${escapeRegex(keyword.value)})`, 'gi');
                     highlightedText = highlightedText.replace(regex, '<span class="highlight">$1</span>');
                 }
@@ -623,12 +635,13 @@
             const keywords = [];
             let current = '';
             let inQuotes = false;
+            let inBackticks = false;
             let tokens = [];
             
             // 分割模式为token
             for (let i = 0; i < pattern.length; i++) {
                 const char = pattern[i];
-                if (char === '"') {
+                if (char === '"' && !inBackticks) {
                     if (inQuotes) {
                         if (current.trim()) {
                             tokens.push({ type: 'exact', value: current.trim() });
@@ -637,14 +650,40 @@
                         inQuotes = false;
                     } else {
                         if (current.trim()) {
-                            tokens.push({ type: 'word', value: current.trim() });
+                            // 将普通文本当作字面量处理
+                            const text = current.trim();
+                            if (text !== 'and' && text !== 'or') {
+                                tokens.push({ type: 'literal', value: text });
+                            }
                         }
                         current = '';
                         inQuotes = true;
                     }
-                } else if (char === ' ' && !inQuotes) {
+                } else if (char === '`' && !inQuotes) {
+                    if (inBackticks) {
+                        if (current.trim()) {
+                            tokens.push({ type: 'literal', value: current.trim() });
+                        }
+                        current = '';
+                        inBackticks = false;
+                    } else {
+                        if (current.trim()) {
+                            // 将普通文本当作字面量处理
+                            const text = current.trim();
+                            if (text !== 'and' && text !== 'or') {
+                                tokens.push({ type: 'literal', value: text });
+                            }
+                        }
+                        current = '';
+                        inBackticks = true;
+                    }
+                } else if (char === ' ' && !inQuotes && !inBackticks) {
                     if (current.trim()) {
-                        tokens.push({ type: 'word', value: current.trim() });
+                        // 将普通文本当作字面量处理
+                        const text = current.trim();
+                        if (text !== 'and' && text !== 'or') {
+                            tokens.push({ type: 'literal', value: text });
+                        }
                         current = '';
                     }
                 } else {
@@ -653,7 +692,17 @@
             }
             
             if (current.trim()) {
-                tokens.push({ type: inQuotes ? 'exact' : 'word', value: current.trim() });
+                if (inQuotes) {
+                    tokens.push({ type: 'exact', value: current.trim() });
+                } else if (inBackticks) {
+                    tokens.push({ type: 'literal', value: current.trim() });
+                } else {
+                    // 将普通文本当作字面量处理
+                    const text = current.trim();
+                    if (text !== 'and' && text !== 'or') {
+                        tokens.push({ type: 'literal', value: text });
+                    }
+                }
             }
             
             // 处理and/or逻辑

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件路径测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 3px; }
+        input[type="text"] { width: 300px; padding: 5px; margin: 5px; }
+        button { padding: 8px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>文件路径处理测试</h1>
+    
+    <div class="test-section">
+        <h3>1. 测试文件路径编码</h3>
+        <input type="text" id="filePath" placeholder="输入文件路径，如: logs\data.log" value="logs\data.log">
+        <button onclick="testEncoding()">测试编码</button>
+        <div id="encodingResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. 测试API调用</h3>
+        <button onclick="testAPI()">测试API调用</button>
+        <div id="apiResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 测试路径分割</h3>
+        <button onclick="testPathSplit()">测试路径分割</button>
+        <div id="splitResult" class="result"></div>
+    </div>
+
+    <script>
+        function testEncoding() {
+            const filePath = document.getElementById('filePath').value;
+            const encoded = encodeURIComponent(filePath);
+            const decoded = decodeURIComponent(encoded);
+            
+            document.getElementById('encodingResult').innerHTML = `
+                <strong>原始路径:</strong> ${filePath}<br>
+                <strong>编码后:</strong> ${encoded}<br>
+                <strong>解码后:</strong> ${decoded}<br>
+                <strong>是否一致:</strong> ${filePath === decoded ? '✅ 是' : '❌ 否'}
+            `;
+        }
+        
+        async function testAPI() {
+            const filePath = document.getElementById('filePath').value;
+            const encoded = encodeURIComponent(filePath);
+            
+            try {
+                const response = await fetch(`/api/logs/content?file=${encoded}&lines=10&reverse=false`, {
+                    headers: {
+                        'Authorization': 'test-token'
+                    }
+                });
+                
+                const result = await response.json();
+                document.getElementById('apiResult').innerHTML = `
+                    <strong>请求路径:</strong> ${filePath}<br>
+                    <strong>编码路径:</strong> ${encoded}<br>
+                    <strong>响应状态:</strong> ${response.status}<br>
+                    <strong>响应内容:</strong> <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('apiResult').innerHTML = `
+                    <strong>错误:</strong> ${error.message}<br>
+                    <strong>请求路径:</strong> ${filePath}<br>
+                    <strong>编码路径:</strong> ${encoded}
+                `;
+            }
+        }
+        
+        function testPathSplit() {
+            const filePath = document.getElementById('filePath').value;
+            const parts = filePath.split(/[\/\\]/);
+            const dir = parts.slice(0, -1).join('/');
+            const file = parts[parts.length - 1];
+            
+            document.getElementById('splitResult').innerHTML = `
+                <strong>原始路径:</strong> ${filePath}<br>
+                <strong>分割结果:</strong> ${JSON.stringify(parts)}<br>
+                <strong>目录部分:</strong> ${dir || '根目录'}<br>
+                <strong>文件名:</strong> ${file}
+            `;
+        }
+        
+        // 页面加载时自动测试
+        window.onload = function() {
+            testEncoding();
+            testPathSplit();
+        };
+    </script>
+</body>
+</html>

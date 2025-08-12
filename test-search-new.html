@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新搜索功能测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 3px; }
+        input[type="text"] { width: 400px; padding: 8px; margin: 5px; font-size: 14px; }
+        button { padding: 8px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .example { background: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 3px; }
+        .highlight { background-color: #fff3cd; padding: 1px 2px; border-radius: 2px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>新搜索功能测试</h1>
+    
+    <div class="test-section">
+        <h3>搜索模式解析测试</h3>
+        <input type="text" id="searchPattern" placeholder="输入搜索模式，如: error exception and "failed"" value="error exception and failed">
+        <button onclick="testParse()">解析搜索模式</button>
+        <div id="parseResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>搜索示例</h3>
+        <div class="example">
+            <strong>1. 普通字面量搜索:</strong><br>
+            <code>error exception</code> → 搜索同时包含 "error" 和 "exception" 的行
+        </div>
+        <div class="example">
+            <strong>2. 双引号精确匹配:</strong><br>
+            <code>"Database connection failed"</code> → 搜索包含完整短语的行
+        </div>
+        <div class="example">
+            <strong>3. 反引号字面量:</strong><br>
+            <code>`High memory usage`</code> → 搜索包含该字符串的行
+        </div>
+        <div class="example">
+            <strong>4. 逻辑连接符:</strong><br>
+            <code>"error" or "warn"</code> → 搜索包含任一短语的行<br>
+            <code>database and "connection failed"</code> → 搜索同时包含字面量和短语的行
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>文本高亮测试</h3>
+        <textarea id="testText" rows="6" cols="80" placeholder="输入要测试的文本">2024-01-01 10:00:00 [ERROR] Database connection failed
+2024-01-01 10:01:00 [WARN] High memory usage detected
+2024-01-01 10:02:00 [INFO] User authentication successful
+2024-01-01 10:03:00 [ERROR] Failed to connect to database
+2024-01-01 10:04:00 [DEBUG] Connection pool exhausted</textarea>
+        <br>
+        <button onclick="testHighlight()">测试高亮</button>
+        <div id="highlightResult" class="result"></div>
+    </div>
+
+    <script>
+        // 解析搜索模式
+        function parseSearchPattern(pattern) {
+            const keywords = [];
+            let current = '';
+            let inQuotes = false;
+            let inBackticks = false;
+            let tokens = [];
+            
+            // 分割模式为token
+            for (let i = 0; i < pattern.length; i++) {
+                const char = pattern[i];
+                if (char === '"' && !inBackticks) {
+                    if (inQuotes) {
+                        if (current.trim()) {
+                            tokens.push({ type: 'exact', value: current.trim() });
+                        }
+                        current = '';
+                        inQuotes = false;
+                    } else {
+                        if (current.trim()) {
+                            // 将普通文本当作字面量处理
+                            const text = current.trim();
+                            if (text !== 'and' && text !== 'or') {
+                                tokens.push({ type: 'literal', value: text });
+                            }
+                        }
+                        current = '';
+                        inQuotes = true;
+                    }
+                } else if (char === '`' && !inQuotes) {
+                    if (inBackticks) {
+                        if (current.trim()) {
+                            tokens.push({ type: 'literal', value: current.trim() });
+                        }
+                        current = '';
+                        inBackticks = false;
+                    } else {
+                        if (current.trim()) {
+                            // 将普通文本当作字面量处理
+                            const text = current.trim();
+                            if (text !== 'and' && text !== 'or') {
+                                tokens.push({ type: 'literal', value: text });
+                            }
+                        }
+                        current = '';
+                        inBackticks = true;
+                    }
+                } else if (char === ' ' && !inQuotes && !inBackticks) {
+                    if (current.trim()) {
+                        // 将普通文本当作字面量处理
+                        const text = current.trim();
+                        if (text !== 'and' && text !== 'or') {
+                            tokens.push({ type: 'literal', value: text });
+                        }
+                        current = '';
+                    }
+                } else {
+                    current += char;
+                }
+            }
+            
+            if (current.trim()) {
+                if (inQuotes) {
+                    tokens.push({ type: 'exact', value: current.trim() });
+                } else if (inBackticks) {
+                    tokens.push({ type: 'literal', value: current.trim() });
+                } else {
+                    // 将普通文本当作字面量处理
+                    const text = current.trim();
+                    if (text !== 'and' && text !== 'or') {
+                        tokens.push({ type: 'literal', value: text });
+                    }
+                }
+            }
+            
+            // 处理and/or逻辑
+            const result = [];
+            for (let i = 0; i < tokens.length; i++) {
+                const token = tokens[i];
+                if (token.value.toLowerCase() === 'and' || token.value.toLowerCase() === 'or') {
+                    if (result.length > 0) {
+                        result[result.length - 1].operator = token.value.toLowerCase();
+                    }
+                } else {
+                    result.push(token);
+                }
+            }
+            
+            return result;
+        }
+        
+        // 转义正则表达式特殊字符
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        
+        // 高亮关键词
+        function highlightKeywords(text, pattern) {
+            if (!pattern) return text;
+            
+            let highlightedText = text;
+            const keywords = parseSearchPattern(pattern);
+            
+            keywords.forEach(keyword => {
+                if (keyword.type === 'exact' || keyword.type === 'literal') {
+                    // 双引号精确匹配、反引号字面量、普通文本字面量
+                    const regex = new RegExp(`(${escapeRegex(keyword.value)})`, 'gi');
+                    highlightedText = highlightedText.replace(regex, '<span class="highlight">$1</span>');
+                }
+            });
+            
+            return highlightedText;
+        }
+        
+        function testParse() {
+            const pattern = document.getElementById('searchPattern').value;
+            const tokens = parseSearchPattern(pattern);
+            
+            let html = '<strong>解析结果:</strong><br>';
+            tokens.forEach((token, index) => {
+                const operator = token.operator ? ` (${token.operator})` : '';
+                html += `${index + 1}. 类型: ${token.type}, 值: "${token.value}"${operator}<br>`;
+            });
+            
+            document.getElementById('parseResult').innerHTML = html;
+        }
+        
+        function testHighlight() {
+            const pattern = document.getElementById('searchPattern').value;
+            const text = document.getElementById('testText').value;
+            const highlighted = highlightKeywords(text, pattern);
+            
+            document.getElementById('highlightResult').innerHTML = `
+                <strong>高亮结果:</strong><br>
+                <pre style="background: white; padding: 10px; border: 1px solid #ccc;">${highlighted}</pre>
+            `;
+        }
+        
+        // 页面加载时自动测试
+        window.onload = function() {
+            testParse();
+        };
+    </script>
+</body>
+</html>

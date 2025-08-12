@@ -51,9 +51,34 @@ func GetLogFiles(c *gin.Context) {
 		}
 
 		// 获取相对于日志目录的路径
-		relPath, err := filepath.Rel(cfg.Logs.Directory, file)
-		if err != nil {
-			// 如果无法获取相对路径，使用文件名
+		var relPath string
+		var baseDir string
+
+		// 确定文件所属的日志目录
+		if len(cfg.Logs.Directories) > 0 {
+			// 使用多目录配置
+			for _, dir := range cfg.Logs.Directories {
+				if strings.HasPrefix(file, dir) {
+					baseDir = dir
+					break
+				}
+			}
+		} else if cfg.Logs.Directory != "" {
+			// 使用单目录配置
+			baseDir = cfg.Logs.Directory
+		} else {
+			// 默认目录
+			baseDir = "./logs"
+		}
+
+		if baseDir != "" {
+			relPath, err = filepath.Rel(baseDir, file)
+			if err != nil {
+				// 如果无法获取相对路径，使用文件名
+				relPath = filepath.Base(file)
+			}
+		} else {
+			// 如果无法确定基础目录，使用文件名
 			relPath = filepath.Base(file)
 		}
 
@@ -97,39 +122,11 @@ func GetLogContent(c *gin.Context) {
 	fmt.Printf("请求的文件路径: %s\n", filePath)
 
 	// 验证文件路径安全性
-	cfg := config.GetConfig()
-	absLogDir, err := filepath.Abs(cfg.Logs.Directory)
+	absFilePath, err := validateFilePath(filePath)
 	if err != nil {
-		fmt.Printf("获取日志目录绝对路径失败: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "服务器配置错误",
-		})
-		return
-	}
-
-	// 清理文件路径，移除可能的路径遍历攻击
-	cleanPath := filepath.Clean(filePath)
-
-	// 如果提供的是相对路径，尝试在日志目录中查找
-	if !filepath.IsAbs(cleanPath) {
-		cleanPath = filepath.Join(cfg.Logs.Directory, cleanPath)
-	}
-
-	// 获取绝对路径
-	absFilePath, err := filepath.Abs(cleanPath)
-	if err != nil {
-		fmt.Printf("获取文件绝对路径失败: %v\n", err)
+		fmt.Printf("文件路径验证失败: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "文件路径格式错误",
-		})
-		return
-	}
-
-	// 安全检查：确保文件路径在日志目录内
-	if !strings.HasPrefix(absFilePath, absLogDir) {
-		fmt.Printf("文件路径安全检查失败: %s 不在目录 %s 内\n", absFilePath, absLogDir)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "文件路径不在允许的目录内",
+			"error": err.Error(),
 		})
 		return
 	}
@@ -148,8 +145,8 @@ func GetLogContent(c *gin.Context) {
 		lines = 200
 	}
 
-	if lines > cfg.Logs.MaxSearchResults {
-		lines = cfg.Logs.MaxSearchResults
+	if lines > config.GetConfig().Logs.MaxSearchResults {
+		lines = config.GetConfig().Logs.MaxSearchResults
 	}
 
 	reverse := reverseStr == "true"
@@ -202,39 +199,11 @@ func SearchLogs(c *gin.Context) {
 	fmt.Printf("搜索请求: 文件=%s, 模式=%s, 倒序=%v, 行数=%d\n", req.File, req.Pattern, req.Reverse, req.Lines)
 
 	// 验证文件路径安全性
-	cfg := config.GetConfig()
-	absLogDir, err := filepath.Abs(cfg.Logs.Directory)
+	absFilePath, err := validateFilePath(req.File)
 	if err != nil {
-		fmt.Printf("获取日志目录绝对路径失败: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "服务器配置错误",
-		})
-		return
-	}
-
-	// 清理文件路径，移除可能的路径遍历攻击
-	cleanPath := filepath.Clean(req.File)
-
-	// 如果提供的是相对路径，尝试在日志目录中查找
-	if !filepath.IsAbs(cleanPath) {
-		cleanPath = filepath.Join(cfg.Logs.Directory, cleanPath)
-	}
-
-	// 获取绝对路径
-	absFilePath, err := filepath.Abs(cleanPath)
-	if err != nil {
-		fmt.Printf("获取文件绝对路径失败: %v\n", err)
+		fmt.Printf("文件路径验证失败: %v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "文件路径格式错误",
-		})
-		return
-	}
-
-	// 安全检查：确保文件路径在日志目录内
-	if !strings.HasPrefix(absFilePath, absLogDir) {
-		fmt.Printf("文件路径安全检查失败: %s 不在目录 %s 内\n", absFilePath, absLogDir)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "文件路径不在允许的目录内",
+			"error": err.Error(),
 		})
 		return
 	}
@@ -258,7 +227,7 @@ func SearchLogs(c *gin.Context) {
 	}
 
 	// 搜索日志
-	results, err := searchInFileAdvanced(absFilePath, searchQuery, cfg.Logs.MaxSearchResults, req.Reverse, req.Lines)
+	results, err := searchInFileAdvanced(absFilePath, searchQuery, config.GetConfig().Logs.MaxSearchResults, req.Reverse, req.Lines)
 	if err != nil {
 		fmt.Printf("搜索文件失败: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -314,7 +283,7 @@ func parseSearchPattern(pattern string) (*SearchQuery, error) {
 			if token.Value == "or" {
 				query.Logic = "or"
 			}
-		} else if token.Type == "exact" || token.Type == "word" {
+		} else if token.Type == "exact" || token.Type == "word" || token.Type == "literal" {
 			query.Keywords = append(query.Keywords, SearchKeyword{
 				Value: token.Value,
 				Type:  token.Type,
@@ -341,13 +310,14 @@ func parseTokens(pattern string) []Token {
 	var tokens []Token
 	var current strings.Builder
 	inQuotes := false
+	inBackticks := false
 
 	for i := 0; i < len(pattern); i++ {
 		char := pattern[i]
 
-		if char == '"' {
+		if char == '"' && !inBackticks {
 			if inQuotes {
-				// 结束引号
+				// 结束双引号
 				if current.Len() > 0 {
 					tokens = append(tokens, Token{
 						Value: strings.TrimSpace(current.String()),
@@ -357,7 +327,7 @@ func parseTokens(pattern string) []Token {
 				}
 				inQuotes = false
 			} else {
-				// 开始引号
+				// 开始双引号
 				if current.Len() > 0 {
 					// 保存引号前的普通文本
 					text := strings.TrimSpace(current.String())
@@ -369,9 +339,10 @@ func parseTokens(pattern string) []Token {
 								Type:  "operator",
 							})
 						} else {
+							// 将普通文本当作字面量处理
 							tokens = append(tokens, Token{
 								Value: text,
-								Type:  "word",
+								Type:  "literal",
 							})
 						}
 					}
@@ -379,7 +350,42 @@ func parseTokens(pattern string) []Token {
 				}
 				inQuotes = true
 			}
-		} else if char == ' ' && !inQuotes {
+		} else if char == '`' && !inQuotes {
+			if inBackticks {
+				// 结束反引号
+				if current.Len() > 0 {
+					tokens = append(tokens, Token{
+						Value: strings.TrimSpace(current.String()),
+						Type:  "literal", // 字面量类型，不考虑转义
+					})
+					current.Reset()
+				}
+				inBackticks = false
+			} else {
+				// 开始反引号
+				if current.Len() > 0 {
+					// 保存反引号前的普通文本
+					text := strings.TrimSpace(current.String())
+					if text != "" {
+						// 检查是否是逻辑连接符
+						if isLogicOperator(text) {
+							tokens = append(tokens, Token{
+								Value: text,
+								Type:  "operator",
+							})
+						} else {
+							// 将普通文本当作字面量处理
+							tokens = append(tokens, Token{
+								Value: text,
+								Type:  "literal",
+							})
+						}
+					}
+					current.Reset()
+				}
+				inBackticks = true
+			}
+		} else if char == ' ' && !inQuotes && !inBackticks {
 			// 空格分割（不在引号内）
 			if current.Len() > 0 {
 				text := strings.TrimSpace(current.String())
@@ -391,9 +397,10 @@ func parseTokens(pattern string) []Token {
 							Type:  "operator",
 						})
 					} else {
+						// 将普通文本当作字面量处理
 						tokens = append(tokens, Token{
 							Value: text,
-							Type:  "word",
+							Type:  "literal",
 						})
 					}
 				}
@@ -413,15 +420,21 @@ func parseTokens(pattern string) []Token {
 					Value: text,
 					Type:  "exact",
 				})
+			} else if inBackticks {
+				tokens = append(tokens, Token{
+					Value: text,
+					Type:  "literal",
+				})
 			} else if isLogicOperator(text) {
 				tokens = append(tokens, Token{
 					Value: text,
 					Type:  "operator",
 				})
 			} else {
+				// 将普通文本当作字面量处理
 				tokens = append(tokens, Token{
 					Value: text,
-					Type:  "word",
+					Type:  "literal",
 				})
 			}
 		}
@@ -535,6 +548,9 @@ func matchesKeyword(line string, keyword SearchKeyword) bool {
 	if keyword.Type == "exact" {
 		// 精确匹配：包含完整的短语
 		return strings.Contains(lineLower, keywordLower)
+	} else if keyword.Type == "literal" {
+		// 字面量匹配：直接包含字符串，不考虑转义
+		return strings.Contains(lineLower, keywordLower)
 	} else {
 		// 单词匹配：作为完整单词出现
 		words := strings.Fields(lineLower)
@@ -613,4 +629,91 @@ func searchInFile(filePath string, regex *regexp.Regexp, maxResults int) ([]Sear
 	}
 
 	return results, nil
+}
+
+// getLogDirectories 获取日志目录列表
+func getLogDirectories() []string {
+	cfg := config.GetConfig()
+	var directories []string
+
+	if len(cfg.Logs.Directories) > 0 {
+		directories = cfg.Logs.Directories
+	} else if cfg.Logs.Directory != "" {
+		directories = []string{cfg.Logs.Directory}
+	} else {
+		directories = []string{"./logs"}
+	}
+
+	return directories
+}
+
+// validateFilePath 验证文件路径安全性
+func validateFilePath(filePath string) (string, error) {
+	// 清理文件路径，移除可能的路径遍历攻击
+	cleanPath := filepath.Clean(filePath)
+
+	// 添加调试信息
+	fmt.Printf("原始文件路径: %s\n", filePath)
+	fmt.Printf("清理后路径: %s\n", cleanPath)
+
+	// 获取日志目录列表
+	directories := getLogDirectories()
+	fmt.Printf("搜索目录: %v\n", directories)
+
+	// 如果提供的是相对路径，尝试在所有日志目录中查找
+	if !filepath.IsAbs(cleanPath) {
+		for _, dir := range directories {
+			fullPath := filepath.Join(dir, cleanPath)
+			fmt.Printf("尝试路径: %s\n", fullPath)
+
+			if _, err := os.Stat(fullPath); err == nil {
+				// 文件存在，验证路径安全性
+				absFilePath, err := filepath.Abs(fullPath)
+				if err != nil {
+					fmt.Printf("获取绝对路径失败: %v\n", err)
+					continue
+				}
+
+				absLogDir, err := filepath.Abs(dir)
+				if err != nil {
+					fmt.Printf("获取目录绝对路径失败: %v\n", err)
+					continue
+				}
+
+				fmt.Printf("文件绝对路径: %s\n", absFilePath)
+				fmt.Printf("目录绝对路径: %s\n", absLogDir)
+
+				// 安全检查：确保文件路径在日志目录内
+				if strings.HasPrefix(absFilePath, absLogDir) {
+					fmt.Printf("路径验证成功: %s\n", absFilePath)
+					return absFilePath, nil
+				} else {
+					fmt.Printf("路径安全检查失败: %s 不在目录 %s 内\n", absFilePath, absLogDir)
+				}
+			} else {
+				fmt.Printf("文件不存在: %s, 错误: %v\n", fullPath, err)
+			}
+		}
+		return "", fmt.Errorf("文件不存在或不在允许的目录内")
+	}
+
+	// 如果是绝对路径，验证是否在任一日志目录内
+	absFilePath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return "", fmt.Errorf("文件路径格式错误")
+	}
+
+	for _, dir := range directories {
+		absLogDir, err := filepath.Abs(dir)
+		if err != nil {
+			continue
+		}
+
+		// 安全检查：确保文件路径在日志目录内
+		if strings.HasPrefix(absFilePath, absLogDir) {
+			return absFilePath, nil
+		}
+	}
+
+	return "", fmt.Errorf("文件路径不在允许的目录内")
 }

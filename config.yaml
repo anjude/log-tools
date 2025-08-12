@@ -12,8 +12,13 @@ auth:
 
 # 日志文件配置
 logs:
-  # 日志文件目录路径
-  directory: "./logs"
+  # 日志文件目录路径（支持数组，可配置多个目录）
+  directories:
+    - "./logs"
+    - "/var/log"
+    - "/tmp/logs"
+  # 兼容旧版本，单个目录配置（如果设置了directories，此配置将被忽略）
+  # directory: "./logs"
   # 日志文件名正则匹配模式，支持日期等变量
   pattern: ".*\\.log$"
   # 默认显示日志条数
