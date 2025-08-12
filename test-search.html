@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>搜索功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 3px;
+        }
+        .example {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>高级搜索功能测试</h1>
+    
+    <div class="test-section">
+        <h2>搜索模式解析测试</h2>
+        <p>输入搜索模式，测试解析功能：</p>
+        <input type="text" id="searchPattern" class="test-input" 
+               placeholder="例如: &quot;error&quot; &quot;exception&quot; and &quot;failed&quot;">
+        <button onclick="testParsePattern()" class="test-button">测试解析</button>
+        <div id="parseResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>搜索示例</h2>
+        <div class="example">
+            <h3>精确匹配（双引号）</h3>
+            <p><code>"error message"</code> - 搜索包含完整短语 "error message" 的行</p>
+            <p><code>"connection failed"</code> - 搜索包含完整短语 "connection failed" 的行</p>
+        </div>
+        
+        <div class="example">
+            <h3>单词匹配</h3>
+            <p><code>error</code> - 搜索包含单词 "error" 的行</p>
+            <p><code>exception</code> - 搜索包含单词 "exception" 的行</p>
+        </div>
+        
+        <div class="example">
+            <h3>AND 逻辑（默认）</h3>
+            <p><code>error exception</code> - 搜索同时包含 "error" 和 "exception" 的行</p>
+            <p><code>"error message" exception</code> - 搜索包含 "error message" 短语且包含 "exception" 单词的行</p>
+        </div>
+        
+        <div class="example">
+            <h3>OR 逻辑</h3>
+            <p><code>error or exception</code> - 搜索包含 "error" 或 "exception" 的行</p>
+            <p><code>"error message" or "exception occurred"</code> - 搜索包含任一短语的行</p>
+        </div>
+        
+        <div class="example">
+            <h3>混合使用</h3>
+            <p><code>"error message" and exception or warning</code> - 搜索包含 "error message" 且包含 "exception"，或者包含 "warning" 的行</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>功能说明</h2>
+        <ul>
+            <li><strong>双引号包裹</strong>：用于精确匹配完整短语，如 <code>"error message"</code></li>
+            <li><strong>空格分割</strong>：多个关键词之间用空格分割</li>
+            <li><strong>AND/OR 连接</strong>：使用 and 或 or 关键字连接多个搜索条件</li>
+            <li><strong>连续空格</strong>：支持连续空格，会被自动处理</li>
+            <li><strong>大小写不敏感</strong>：搜索不区分大小写</li>
+        </ul>
+    </div>
+
+    <script>
+        // 解析搜索模式的函数（与后端逻辑一致）
+        function parseSearchPattern(pattern) {
+            const query = {
+                keywords: [],
+                logic: "and" // 默认为and逻辑
+            };
+
+            // 分割模式为token
+            const tokens = parseTokens(pattern);
+            if (tokens.length === 0) {
+                throw new Error("搜索模式为空");
+            }
+
+            // 处理逻辑连接符
+            for (let i = 0; i < tokens.length; i++) {
+                const token = tokens[i];
+                if (token.type === "operator") {
+                    if (i === 0 || i === tokens.length - 1) {
+                        throw new Error("逻辑连接符不能出现在开头或结尾");
+                    }
+                    if (token.value.toLowerCase() === "or") {
+                        query.logic = "or";
+                    }
+                } else if (token.type === "exact" || token.type === "word") {
+                    query.keywords.push({
+                        value: token.value,
+                        type: token.type
+                    });
+                }
+            }
+
+            if (query.keywords.length === 0) {
+                throw new Error("没有找到有效的搜索关键词");
+            }
+
+            return query;
+        }
+
+        // 解析token
+        function parseTokens(pattern) {
+            const tokens = [];
+            let current = "";
+            let inQuotes = false;
+
+            for (let i = 0; i < pattern.length; i++) {
+                const char = pattern[i];
+
+                if (char === '"') {
+                    if (inQuotes) {
+                        // 结束引号
+                        if (current.trim()) {
+                            tokens.push({
+                                value: current.trim(),
+                                type: "exact"
+                            });
+                            current = "";
+                        }
+                        inQuotes = false;
+                    } else {
+                        // 开始引号
+                        if (current.trim()) {
+                            const text = current.trim();
+                            if (text !== "") {
+                                if (isLogicOperator(text)) {
+                                    tokens.push({
+                                        value: text,
+                                        type: "operator"
+                                    });
+                                } else {
+                                    tokens.push({
+                                        value: text,
+                                        type: "word"
+                                    });
+                                }
+                            }
+                            current = "";
+                        }
+                        inQuotes = true;
+                    }
+                } else if (char === ' ' && !inQuotes) {
+                    // 空格分割（不在引号内）
+                    if (current.trim()) {
+                        const text = current.trim();
+                        if (text !== "") {
+                            if (isLogicOperator(text)) {
+                                tokens.push({
+                                    value: text,
+                                    type: "operator"
+                                });
+                            } else {
+                                tokens.push({
+                                    value: text,
+                                    type: "word"
+                                });
+                            }
+                        }
+                        current = "";
+                    }
+                } else {
+                    current += char;
+                }
+            }
+
+            // 处理最后一个token
+            if (current.trim()) {
+                const text = current.trim();
+                if (text !== "") {
+                    if (inQuotes) {
+                        tokens.push({
+                            value: text,
+                            type: "exact"
+                        });
+                    } else if (isLogicOperator(text)) {
+                        tokens.push({
+                            value: text,
+                            type: "operator"
+                        });
+                    } else {
+                        tokens.push({
+                            value: text,
+                            type: "word"
+                        });
+                    }
+                }
+            }
+
+            return tokens;
+        }
+
+        // 检查是否是逻辑连接符
+        function isLogicOperator(text) {
+            const lower = text.toLowerCase().trim();
+            return lower === "and" || lower === "or";
+        }
+
+        // 测试解析功能
+        function testParsePattern() {
+            const pattern = document.getElementById('searchPattern').value.trim();
+            const resultDiv = document.getElementById('parseResult');
+            
+            if (!pattern) {
+                resultDiv.innerHTML = '<div style="color: red;">请输入搜索模式</div>';
+                return;
+            }
+
+            try {
+                const query = parseSearchPattern(pattern);
+                let html = '<h3>解析结果：</h3>';
+                html += `<p><strong>逻辑：</strong>${query.logic.toUpperCase()}</p>`;
+                html += '<p><strong>关键词：</strong></p><ul>';
+                
+                query.keywords.forEach((keyword, index) => {
+                    html += `<li>${index + 1}. <strong>${keyword.type === 'exact' ? '精确匹配' : '单词匹配'}</strong>: "${keyword.value}"</li>`;
+                });
+                
+                html += '</ul>';
+                
+                // 显示解析后的搜索逻辑
+                html += '<p><strong>搜索逻辑：</strong></p>';
+                if (query.logic === 'and') {
+                    html += `<p>必须同时匹配所有关键词：${query.keywords.map(k => k.type === 'exact' ? `"${k.value}"` : k.value).join(' AND ')}</p>`;
+                } else {
+                    html += `<p>匹配任一关键词即可：${query.keywords.map(k => k.type === 'exact' ? `"${k.value}"` : k.value).join(' OR ')}</p>`;
+                }
+                
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                resultDiv.innerHTML = `<div style="color: red;">解析错误：${error.message}</div>`;
+            }
+        }
+
+        // 页面加载时设置示例
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('searchPattern').value = '"error message" and exception';
+        });
+    </script>
+</body>
+</html>
