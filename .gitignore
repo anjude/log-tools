@@ -1,0 +1,45 @@
+# 二进制文件
+log-tools
+log-tools.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# 构建目录
+build/
+dist/
+bin/
+
+# Go相关
+*.test
+*.out
+go.work
+
+# 依赖目录
+vendor/
+
+# IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+
+# 临时文件
+tmp/
+temp/
+
+# 配置文件（生产环境）
+config.prod.yaml
+.env
+
+# 会话文件
+sessions/

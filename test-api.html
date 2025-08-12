@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        .result { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>日志管理工具 API 测试</h1>
+    
+    <div class="test-section">
+        <h3>1. 登录测试</h3>
+        <button onclick="testLogin()">测试登录</button>
+        <div id="loginResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. 检查认证状态</h3>
+        <button onclick="testCheckAuth()">检查认证</button>
+        <div id="checkAuthResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 获取日志文件列表</h3>
+        <button onclick="testGetFiles()">获取文件列表</button>
+        <div id="getFilesResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. 获取日志内容</h3>
+        <input type="text" id="testFilePath" placeholder="输入文件路径" value="./logs/data.log">
+        <button onclick="testGetContent()">获取内容</button>
+        <div id="getContentResult" class="result"></div>
+    </div>
+
+    <script>
+        let authToken = '';
+        
+        async function testLogin() {
+            const result = document.getElementById('loginResult');
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'milk', password: 'milk@123' })
+                });
+                
+                const data = await response.json();
+                console.log('登录响应:', data);
+                
+                if (response.ok && data.token) {
+                    authToken = data.token;
+                    result.innerHTML = `<div class="success">登录成功！Token: ${data.token.substring(0, 20)}...</div>`;
+                } else {
+                    result.innerHTML = `<div class="error">登录失败: ${data.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">错误: ${error.message}</div>`;
+            }
+        }
+        
+        async function testCheckAuth() {
+            const result = document.getElementById('checkAuthResult');
+            if (!authToken) {
+                result.innerHTML = '<div class="error">请先登录</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/check-auth', {
+                    headers: { 'Authorization': authToken }
+                });
+                
+                const data = await response.json();
+                console.log('认证检查响应:', data);
+                
+                if (response.ok) {
+                    result.innerHTML = `<div class="success">认证成功: ${JSON.stringify(data)}</div>`;
+                } else {
+                    result.innerHTML = `<div class="error">认证失败: ${data.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">错误: ${error.message}</div>`;
+            }
+        }
+        
+        async function testGetFiles() {
+            const result = document.getElementById('getFilesResult');
+            if (!authToken) {
+                result.innerHTML = '<div class="error">请先登录</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/logs/files', {
+                    headers: { 'Authorization': authToken }
+                });
+                
+                const data = await response.json();
+                console.log('获取文件列表响应:', data);
+                
+                if (response.ok) {
+                    result.innerHTML = `<div class="success">成功获取 ${data.files ? data.files.length : 0} 个文件<br>数据: ${JSON.stringify(data, null, 2)}</div>`;
+                } else {
+                    result.innerHTML = `<div class="error">获取失败: ${data.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">错误: ${error.message}</div>`;
+            }
+        }
+        
+        async function testGetContent() {
+            const result = document.getElementById('getContentResult');
+            if (!authToken) {
+                result.innerHTML = '<div class="error">请先登录</div>';
+                return;
+            }
+            
+            const filePath = document.getElementById('testFilePath').value;
+            if (!filePath) {
+                result.innerHTML = '<div class="error">请输入文件路径</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/logs/content?file=${encodeURIComponent(filePath)}&lines=10`, {
+                    headers: { 'Authorization': authToken }
+                });
+                
+                const data = await response.json();
+                console.log('获取内容响应:', data);
+                
+                if (response.ok) {
+                    result.innerHTML = `<div class="success">成功获取内容<br>行数: ${data.lines}<br>内容: ${JSON.stringify(data.content, null, 2)}</div>`;
+                } else {
+                    result.innerHTML = `<div class="error">获取失败: ${data.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">错误: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

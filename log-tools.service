@@ -1,0 +1,30 @@
+[Unit]
+Description=Log Management Tools
+Documentation=https://github.com/your-repo/log-tools
+After=network.target
+
+[Service]
+Type=simple
+User=log-tools
+Group=log-tools
+WorkingDirectory=/opt/log-tools
+ExecStart=/opt/log-tools/log-tools
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=log-tools
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log /opt/log-tools
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=1024
+
+[Install]
+WantedBy=multi-user.target

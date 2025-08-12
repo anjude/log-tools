@@ -1,0 +1,22 @@
+# 日志管理工具配置文件
+
+# 服务器配置
+server:
+  port: 6003
+  host: "0.0.0.0"
+
+# 认证配置
+auth:
+  username: "milk"
+  password: "milk@123"
+
+# 日志文件配置
+logs:
+  # 日志文件目录路径
+  directory: "./logs"
+  # 日志文件名正则匹配模式，支持日期等变量
+  pattern: ".*\\.log$"
+  # 默认显示日志条数
+  default_lines: 200
+  # 最大搜索返回条数
+  max_search_results: 1000

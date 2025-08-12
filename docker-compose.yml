@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  log-tools:
+    build: .
+    container_name: log-tools
+    ports:
+      - "6003:6003"
+    volumes:
+      # 挂载日志目录（根据实际需要修改）
+      - /var/log:/var/log:ro
+      # 挂载配置文件（可选，用于动态配置）
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6003/api/check-auth"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - log-tools-network
+
+  # 可选：添加Nginx反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: log-tools-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - log-tools
+    restart: unless-stopped
+    networks:
+      - log-tools-network
+
+networks:
+  log-tools-network:
+    driver: bridge
+
+volumes:
+  log-data:
