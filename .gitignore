@@ -43,3 +43,4 @@ config.prod.yaml
 
 # 会话文件
 sessions/
+config.yaml
