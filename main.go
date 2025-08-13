@@ -2,9 +2,10 @@ package main
 
 import (
 	"log"
-	"log-tools/config"
-	"log-tools/handlers"
-	"log-tools/middleware"
+
+	"github.com/anjude/log-tools/config"
+	"github.com/anjude/log-tools/handlers"
+	"github.com/anjude/log-tools/middleware"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"

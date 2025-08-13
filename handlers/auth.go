@@ -3,8 +3,8 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"log-tools/config"
-	"log-tools/middleware"
+	"github.com/anjude/log-tools/config"
+	"github.com/anjude/log-tools/middleware"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

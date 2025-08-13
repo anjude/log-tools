@@ -1,4 +1,4 @@
-module log-tools
+module github.com/anjude/log-tools
 
 go 1.22
 

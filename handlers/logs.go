@@ -3,7 +3,6 @@ package handlers
 import (
 	"bufio"
 	"fmt"
-	"log-tools/config"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,6 +10,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/anjude/log-tools/config"
 
 	"github.com/gin-gonic/gin"
 )
