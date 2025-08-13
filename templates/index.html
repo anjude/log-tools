@@ -185,6 +185,37 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        
+        /* 多文件选择样式 */
+        .file-item .form-check-input {
+            margin-top: 0;
+            cursor: pointer;
+        }
+        
+        .file-item .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+        
+        .file-item:hover .form-check-input {
+            border-color: #667eea;
+        }
+        
+        /* 固定文件特殊样式 */
+        .file-item.fixed-file {
+            background-color: #fff3cd;
+            border-left: 3px solid #ffc107;
+        }
+        
+        .file-item.fixed-file:hover {
+            background-color: #ffeaa7;
+            border-color: #f39c12;
+        }
+        
+        .file-item.fixed-file .form-check-input:checked {
+            background-color: #ffc107;
+            border-color: #ffc107;
+        }
         #fileSearchInput {
             font-size: 12px;
             padding: 6px 10px;
@@ -300,7 +331,6 @@
         .file-info-container {
             display: flex;
             align-items: center;
-            justify-content: space-between;
             width: 100%;
             min-width: 0; /* 允许收缩 */
         }
@@ -447,6 +477,15 @@
                             <input type="text" class="form-control form-control-sm" id="fileSearchInput" 
                                    placeholder="搜索文件..." oninput="filterFiles()">
                         </div>
+                        <!-- 全选/取消全选按钮 -->
+                        <div class="mb-2 d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="selectAllFiles()">
+                                <i class="bi bi-check-all"></i> 全选
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="deselectAllFiles()">
+                                <i class="bi bi-x-circle"></i> 取消全选
+                            </button>
+                        </div>
                         <div id="fileList" class="loading">
                             <i class="bi bi-arrow-clockwise spin"></i> 加载中...
                         </div>
@@ -468,7 +507,10 @@
                         <div class="config-section">
                             <div class="row search-row">
                                 <div class="col-12">
-                                    <label for="searchPattern" class="form-label">搜索模式</label>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label for="searchPattern" class="form-label mb-0">搜索模式</label>
+                                        <span id="selectedFilesCount" class="badge bg-info">未选择文件</span>
+                                    </div>
                                     <div class="search-input-group">
                                         <input type="text" class="form-control" id="searchPattern" 
                                                placeholder="支持双引号精确匹配，反引号字面量，普通文本字面量，and/or连接"
@@ -671,30 +713,41 @@
                     const directory = file.directory || '根目录';
                     const fullPath = file.full_path || file.path;
                     
-                    // 如果是新目录，添加目录标题
-                    if (directory !== currentDirectory) {
-                        currentDirectory = directory;
-                        html += `<div class="directory-header text-muted small mb-2"><i class="bi bi-folder"></i> ${directory}</div>`;
-                    }
+                                         // 如果是新目录，添加目录标题
+                     if (directory !== currentDirectory) {
+                         currentDirectory = directory;
+                         const icon = directory === '固定文件' ? 'bi-star-fill' : 'bi-folder';
+                         const color = directory === '固定文件' ? 'text-warning' : 'text-muted';
+                         html += `<div class="directory-header ${color} small mb-2"><i class="bi ${icon}"></i> ${directory}</div>`;
+                     }
                     
                     console.log('处理文件:', file);
-                    html += `
-                        <div class="file-item" onclick="selectFile('${file.path}', event)" title="${fullPath}">
-                            <div class="file-info-container">
-                                <div class="file-name-section">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-file-text text-primary me-2"></i>
-                                        <span class="file-name">${file.name}</span>
-                                    </div>
-                                    <div class="file-info">
-                                        <span class="file-time">${modTime}</span>
-                                        <span class="badge bg-light text-dark">${size}</span>
-                                        <span class="text-muted small file-path-info" title="${file.path}">${file.path}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                                         const isFixedFile = directory === '固定文件';
+                     const fileItemClass = isFixedFile ? 'file-item fixed-file' : 'file-item';
+                     const fileIconClass = isFixedFile ? 'bi-star-fill text-warning' : 'bi-file-text text-primary';
+                     
+                     html += `
+                         <div class="${fileItemClass}" onclick="selectFile('${file.path}', event)" title="${fullPath}">
+                             <div class="file-info-container">
+                                 <div class="d-flex align-items-center">
+                                     <input type="checkbox" class="form-check-input me-2" value="${file.path}" 
+                                            onchange="updateFileSelection()" style="pointer-events: none;">
+                                     <div class="file-name-section">
+                                         <div class="d-flex align-items-center">
+                                             <i class="bi ${fileIconClass} me-2"></i>
+                                             <span class="file-name">${file.name}</span>
+                                             ${isFixedFile ? '<span class="badge bg-warning text-dark ms-2">固定</span>' : ''}
+                                         </div>
+                                         <div class="file-info">
+                                             <span class="file-time">${modTime}</span>
+                                             <span class="badge bg-light text-dark">${size}</span>
+                                             <span class="text-muted small file-path-info" title="${file.path}">${file.path}</span>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+                     `;
                 }
             });
             
@@ -702,28 +755,122 @@
             
             // 尝试恢复上次选择的文件
             restoreLastSelectedFile(files);
+            
+            // 初始化选中文件数量显示
+            updateFileSelection();
         }
 
-        // 选择文件
+        // 选择文件（支持多选）
         function selectFile(filePath, event) {
             console.log('选择文件:', filePath);
-            currentFile = filePath;
-            
-            // 保存选择的文件到本地存储
-            localStorage.setItem('lastSelectedFile', filePath);
             
             // 更新选中状态
-            document.querySelectorAll('.file-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // 安全地添加active类
             if (event && event.currentTarget) {
-                event.currentTarget.classList.add('active');
+                const checkbox = event.currentTarget.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    updateFileSelection();
+                }
+            }
+        }
+
+        // 更新文件选择状态
+        function updateFileSelection() {
+            const selectedFiles = getSelectedFiles();
+            
+            // 保存勾选状态到本地存储
+            saveSelectedFiles(selectedFiles);
+            
+            // 更新选中文件数量显示
+            const countBadge = document.getElementById('selectedFilesCount');
+            if (countBadge) {
+                if (selectedFiles.length === 0) {
+                    countBadge.textContent = '未选择文件';
+                    countBadge.className = 'badge bg-warning';
+                } else if (selectedFiles.length === 1) {
+                    countBadge.textContent = `已选择 1 个文件`;
+                    countBadge.className = 'badge bg-success';
+                } else {
+                    countBadge.textContent = `已选择 ${selectedFiles.length} 个文件`;
+                    countBadge.className = 'badge bg-info';
+                }
             }
             
-            // 加载日志内容
-            refreshLogContent();
+            if (selectedFiles.length === 0) {
+                // 如果没有选中文件，清空日志内容
+                document.getElementById('logContent').innerHTML = 
+                    '<div class="text-muted text-center">请选择至少一个日志文件</div>';
+            } else if (selectedFiles.length === 1) {
+                // 如果只选中一个文件，加载该文件内容
+                currentFile = selectedFiles[0];
+                localStorage.setItem('lastSelectedFile', currentFile);
+                refreshLogContent();
+            } else {
+                // 如果选中多个文件，显示多文件选择状态
+                currentFile = null;
+                document.getElementById('logContent').innerHTML = 
+                    `<div class="text-muted text-center">已选择 ${selectedFiles.length} 个文件，可以进行搜索</div>`;
+            }
+        }
+
+        // 获取选中的文件列表
+        function getSelectedFiles() {
+            const checkboxes = document.querySelectorAll('#fileList input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        // 保存勾选的文件列表到本地存储
+        function saveSelectedFiles(selectedFiles) {
+            try {
+                localStorage.setItem('selectedFiles', JSON.stringify(selectedFiles));
+                console.log('已保存勾选的文件列表:', selectedFiles);
+            } catch (error) {
+                console.error('保存勾选文件列表失败:', error);
+            }
+        }
+
+        // 从本地存储恢复勾选的文件列表
+        function restoreSelectedFiles() {
+            try {
+                const savedFiles = localStorage.getItem('selectedFiles');
+                if (savedFiles) {
+                    const selectedFiles = JSON.parse(savedFiles);
+                    console.log('恢复勾选的文件列表:', selectedFiles);
+                    
+                    // 选中对应的复选框
+                    selectedFiles.forEach(filePath => {
+                        const checkbox = document.querySelector(`#fileList input[value="${filePath}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                    
+                    // 更新选择状态
+                    updateFileSelection();
+                    return true;
+                }
+            } catch (error) {
+                console.error('恢复勾选文件列表失败:', error);
+            }
+            return false;
+        }
+
+        // 全选文件
+        function selectAllFiles() {
+            const checkboxes = document.querySelectorAll('#fileList input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateFileSelection();
+        }
+
+        // 取消全选文件
+        function deselectAllFiles() {
+            const checkboxes = document.querySelectorAll('#fileList input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateFileSelection();
         }
 
         // 配置变更处理
@@ -957,15 +1104,21 @@
 
         // 搜索日志
         async function searchLogs() {
-            if (!currentFile) {
-                showError('请先选择一个日志文件');
+            const selectedFiles = getSelectedFiles();
+            if (selectedFiles.length === 0) {
+                showError('请先选择至少一个日志文件');
                 return;
             }
             
             const pattern = document.getElementById('searchPattern').value.trim();
             if (!pattern) {
                 // 如果没有搜索模式，显示普通日志内容
-                refreshLogContent();
+                if (selectedFiles.length === 1) {
+                    currentFile = selectedFiles[0];
+                    refreshLogContent();
+                } else {
+                    showError('请选择搜索模式或只选择一个文件查看内容');
+                }
                 return;
             }
             
@@ -984,7 +1137,7 @@
                         'Authorization': token
                     },
                     body: JSON.stringify({
-                        file: currentFile,
+                        files: selectedFiles,
                         pattern: pattern,
                         reverse: reverseOrder,
                         lines: lineCount
@@ -994,7 +1147,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    displaySearchResults(data.results, data.count, pattern);
+                    displaySearchResults(data.results, data.count, pattern, selectedFiles);
                 } else {
                     showError('搜索失败: ' + data.error);
                 }
@@ -1004,7 +1157,7 @@
         }
 
         // 显示搜索结果
-        function displaySearchResults(results, count, pattern) {
+        function displaySearchResults(results, count, pattern, selectedFiles) {
             const logContent = document.getElementById('logContent');
             
             if (!logContent) {
@@ -1013,25 +1166,28 @@
             }
             
             if (!results || !Array.isArray(results) || results.length === 0) {
+                const fileNames = selectedFiles.map(f => f.split('/').pop()).join(', ');
                 logContent.innerHTML = `
                     <div class="search-status">
-                        <i class="bi bi-info-circle"></i> 搜索模式: "${pattern}" - 没有找到匹配的结果
+                        <i class="bi bi-info-circle"></i> 搜索模式: "${pattern}" - 在文件 [${fileNames}] 中没有找到匹配的结果
                     </div>
                     <div class="text-muted text-center">没有找到匹配的结果</div>
                 `;
                 return;
             }
             
+            const fileNames = selectedFiles.map(f => f.split('/').pop()).join(', ');
             let html = `
                 <div class="search-status">
-                    <i class="bi bi-search"></i> 搜索模式: "${pattern}" - 找到 ${count || 0} 条匹配结果
+                    <i class="bi bi-search"></i> 搜索模式: "${pattern}" - 在文件 [${fileNames}] 中找到 ${count || 0} 条匹配结果
                 </div>
             `;
             
             results.forEach(result => {
                 if (result && result.line_number !== undefined && result.content) {
-                    const fileName = currentFile ? currentFile.split('/').pop() : '未知文件';
-                    const filePath = currentFile || '未知路径';
+                    // 使用搜索结果中的文件信息
+                    const fileName = result.file || '未知文件';
+                    const filePath = result.file_path || '未知路径';
                     const highlightedContent = highlightKeywords(result.content);
                     html += `
                         <div class="log-line">
@@ -1108,22 +1264,47 @@
 
         // 尝试恢复上次选择的文件
         function restoreLastSelectedFile(files) {
+            // 优先尝试恢复勾选的文件列表
+            if (restoreSelectedFiles()) {
+                console.log('成功恢复勾选的文件列表');
+                return;
+            }
+            
+            // 如果没有勾选状态，尝试恢复单个文件
             const lastSelectedFile = localStorage.getItem('lastSelectedFile');
             if (lastSelectedFile) {
                 const foundFile = files.find(f => f.path === lastSelectedFile);
                 if (foundFile) {
                     console.log('恢复上次选择的文件:', foundFile.path);
-                    selectFile(foundFile.path, null);
+                    // 选中对应的复选框
+                    const checkbox = document.querySelector(`#fileList input[value="${foundFile.path}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        currentFile = foundFile.path;
+                        updateFileSelection();
+                    }
                 } else {
                     console.warn('上次选择的文件不存在，重新选择第一个文件');
                     if (files.length > 0) {
-                        selectFile(files[0].path, null);
+                        const firstFile = files[0];
+                        const checkbox = document.querySelector(`#fileList input[value="${firstFile.path}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            currentFile = firstFile.path;
+                            updateFileSelection();
+                        }
                     }
                 }
             } else {
                 console.log('没有上次选择的文件，自动选择第一个文件');
                 if (files.length > 0) {
-                    selectFile(files[0].path, null);
+                    const firstFile = files[0];
+                    const checkbox = document.querySelector(`#fileList input[value="${firstFile.path}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        currentFile = firstFile.path;
+                        updateFileSelection();
+                    }
                 }
             }
         }

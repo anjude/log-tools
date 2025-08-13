@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多文件搜索测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .file-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .results {
+            margin-top: 20px;
+            border-top: 2px solid #eee;
+            padding-top: 20px;
+        }
+        .result-item {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        .result-content {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>多文件搜索测试</h1>
+        
+        <div class="form-group">
+            <label>选择要搜索的文件：</label>
+            <div class="file-list" id="fileList">
+                <!-- 文件列表将通过JavaScript动态加载 -->
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="searchPattern">搜索模式：</label>
+            <input type="text" id="searchPattern" placeholder="输入搜索关键词，支持 AND/OR 逻辑" value="error">
+        </div>
+
+        <div class="form-group">
+            <label for="maxLines">最大返回结果数：</label>
+            <input type="number" id="maxLines" value="100" min="1" max="1000">
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="reverse"> 倒序搜索
+            </label>
+        </div>
+
+        <button onclick="searchLogs()">开始搜索</button>
+
+        <div class="results" id="results">
+            <!-- 搜索结果将在这里显示 -->
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时获取文件列表
+        window.onload = function() {
+            loadFileList();
+        };
+
+        // 加载文件列表
+        async function loadFileList() {
+            try {
+                const response = await fetch('/api/logs/files');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                const fileList = document.getElementById('fileList');
+                fileList.innerHTML = '';
+                
+                data.files.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = file.path;
+                    checkbox.id = `file_${file.path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = `file_${file.path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    label.textContent = `${file.path} (${file.size} bytes, ${file.mod_time})`;
+                    
+                    fileItem.appendChild(checkbox);
+                    fileItem.appendChild(label);
+                    fileList.appendChild(fileItem);
+                });
+            } catch (error) {
+                console.error('加载文件列表失败:', error);
+                document.getElementById('fileList').innerHTML = '<div class="error">加载文件列表失败: ' + error.message + '</div>';
+            }
+        }
+
+        // 执行搜索
+        async function searchLogs() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div>搜索中...</div>';
+
+            // 获取选中的文件
+            const selectedFiles = [];
+            const checkboxes = document.querySelectorAll('#fileList input[type="checkbox"]:checked');
+            checkboxes.forEach(checkbox => {
+                selectedFiles.push(checkbox.value);
+            });
+
+            if (selectedFiles.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">请至少选择一个文件进行搜索</div>';
+                return;
+            }
+
+            // 构建搜索请求
+            const searchRequest = {
+                files: selectedFiles,
+                pattern: document.getElementById('searchPattern').value,
+                reverse: document.getElementById('reverse').checked,
+                lines: parseInt(document.getElementById('maxLines').value)
+            };
+
+            try {
+                const response = await fetch('/api/logs/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(searchRequest)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                console.error('搜索失败:', error);
+                resultsDiv.innerHTML = '<div class="error">搜索失败: ' + error.message + '</div>';
+            }
+        }
+
+        // 显示搜索结果
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (data.results && data.results.length > 0) {
+                let html = `<div class="success">找到 ${data.count} 个结果，搜索文件: ${data.files.join(', ')}</div>`;
+                
+                data.results.forEach(result => {
+                    html += `
+                        <div class="result-item">
+                            <div class="result-header">
+                                <span>文件: ${result.file}</span>
+                                <span>行号: ${result.line_number}</span>
+                            </div>
+                            <div class="result-content">${result.content}</div>
+                        </div>
+                    `;
+                });
+                
+                resultsDiv.innerHTML = html;
+            } else {
+                resultsDiv.innerHTML = '<div class="success">未找到匹配的结果</div>';
+            }
+        }
+    </script>
+</body>
+</html>

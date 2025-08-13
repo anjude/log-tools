@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端改进功能测试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .file-item {
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .file-item:hover {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+        .file-item .form-check-input {
+            margin-top: 0;
+            cursor: pointer;
+        }
+        .file-item .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+        .file-item:hover .form-check-input {
+            border-color: #667eea;
+        }
+        .file-info-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .file-name-section {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #212529;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+        .file-info {
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .file-time {
+            color: #6c757d;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            flex-shrink: 0;
+        }
+        .file-path-info {
+            color: #6c757d;
+            font-size: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+            display: inline-block;
+            vertical-align: bottom;
+        }
+        .test-info {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .test-info h5 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .test-info ul {
+            margin-bottom: 0;
+        }
+        .test-info li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="test-info">
+            <h5>🧪 功能测试说明</h5>
+            <ul>
+                <li><strong>左对齐测试</strong>：文件信息现在应该左对齐显示，不再分散对齐</li>
+                <li><strong>记住勾选状态</strong>：勾选文件后刷新页面，应该自动恢复勾选状态</li>
+                <li><strong>状态持久化</strong>：勾选状态会保存到浏览器本地存储</li>
+            </ul>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">日志文件列表</h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- 全选/取消全选按钮 -->
+                        <div class="mb-2 d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="selectAllFiles()">
+                                全选
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="deselectAllFiles()">
+                                取消全选
+                            </button>
+                        </div>
+                        
+                        <!-- 测试按钮 -->
+                        <div class="mb-2 d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-info" onclick="testSaveState()">
+                                测试保存状态
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="clearSavedState()">
+                                清除保存状态
+                            </button>
+                        </div>
+                        
+                        <!-- 文件列表 -->
+                        <div id="fileList">
+                            <!-- 模拟文件列表 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">功能状态</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">选中状态</label>
+                            <span id="selectedFilesCount" class="badge bg-info">未选择文件</span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>当前勾选的文件：</strong>
+                            <div id="currentSelection" class="text-muted small mt-1">
+                                无
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>本地存储状态：</strong>
+                            <div id="storageStatus" class="text-muted small mt-1">
+                                检查中...
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <strong>测试步骤：</strong>
+                            <ol class="mb-0 mt-2">
+                                <li>勾选几个文件</li>
+                                <li>点击"测试保存状态"按钮</li>
+                                <li>刷新页面</li>
+                                <li>观察是否自动恢复勾选状态</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟文件数据
+        const mockFiles = [
+            {
+                path: "app.log",
+                name: "app.log",
+                size: 1024000,
+                mod_time: "2025-01-20 10:30:00",
+                directory: "根目录"
+            },
+            {
+                path: "error.log",
+                name: "error.log",
+                size: 512000,
+                mod_time: "2025-01-20 10:25:00",
+                directory: "根目录"
+            },
+            {
+                path: "debug.log",
+                name: "debug.log",
+                size: 2048000,
+                mod_time: "2025-01-20 10:20:00",
+                directory: "根目录"
+            },
+            {
+                path: "access.log",
+                name: "access.log",
+                size: 1536000,
+                mod_time: "2025-01-20 10:15:00",
+                directory: "根目录"
+            },
+            {
+                path: "system.log",
+                name: "system.log",
+                size: 3072000,
+                mod_time: "2025-01-20 10:10:00",
+                directory: "根目录"
+            }
+        ];
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            displayFileList();
+            updateFileSelection();
+            updateStorageStatus();
+        });
+
+        // 显示文件列表
+        function displayFileList() {
+            const fileList = document.getElementById('fileList');
+            let html = '';
+            
+            mockFiles.forEach(file => {
+                const size = formatFileSize(file.size);
+                html += `
+                    <div class="file-item" onclick="selectFile('${file.path}', event)" title="${file.path}">
+                        <div class="file-info-container">
+                            <div class="d-flex align-items-center">
+                                <input type="checkbox" class="form-check-input me-2" value="${file.path}" 
+                                       onchange="updateFileSelection()" style="pointer-events: none;">
+                                <div class="file-name-section">
+                                    <div class="d-flex align-items-center">
+                                        <span class="file-name">${file.name}</span>
+                                    </div>
+                                    <div class="file-info">
+                                        <span class="file-time">${file.mod_time}</span>
+                                        <span class="badge bg-light text-dark">${size}</span>
+                                        <span class="text-muted small file-path-info" title="${file.path}">${file.path}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            fileList.innerHTML = html;
+            
+            // 尝试恢复勾选状态
+            restoreSelectedFiles();
+        }
+
+        // 选择文件
+        function selectFile(filePath, event) {
+            if (event && event.currentTarget) {
+                const checkbox = event.currentTarget.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    updateFileSelection();
+                }
+            }
+        }
+
+        // 更新文件选择状态
+        function updateFileSelection() {
+            const selectedFiles = getSelectedFiles();
+            
+            // 保存勾选状态到本地存储
+            saveSelectedFiles(selectedFiles);
+            
+            // 更新选中文件数量显示
+            const countBadge = document.getElementById('selectedFilesCount');
+            if (countBadge) {
+                if (selectedFiles.length === 0) {
+                    countBadge.textContent = '未选择文件';
+                    countBadge.className = 'badge bg-warning';
+                } else if (selectedFiles.length === 1) {
+                    countBadge.textContent = `已选择 1 个文件`;
+                    countBadge.className = 'badge bg-success';
+                } else {
+                    countBadge.textContent = `已选择 ${selectedFiles.length} 个文件`;
+                    countBadge.className = 'badge bg-info';
+                }
+            }
+            
+            // 更新当前选择显示
+            updateCurrentSelection(selectedFiles);
+        }
+
+        // 更新当前选择显示
+        function updateCurrentSelection(selectedFiles) {
+            const currentSelection = document.getElementById('currentSelection');
+            if (selectedFiles.length === 0) {
+                currentSelection.textContent = '无';
+                currentSelection.className = 'text-muted small mt-1';
+            } else {
+                currentSelection.innerHTML = selectedFiles.map(f => `<code>${f}</code>`).join(', ');
+                currentSelection.className = 'text-success small mt-1';
+            }
+        }
+
+        // 获取选中的文件列表
+        function getSelectedFiles() {
+            const checkboxes = document.querySelectorAll('#fileList input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        // 保存勾选的文件列表到本地存储
+        function saveSelectedFiles(selectedFiles) {
+            try {
+                localStorage.setItem('selectedFiles', JSON.stringify(selectedFiles));
+                console.log('已保存勾选的文件列表:', selectedFiles);
+                updateStorageStatus();
+            } catch (error) {
+                console.error('保存勾选文件列表失败:', error);
+            }
+        }
+
+        // 从本地存储恢复勾选的文件列表
+        function restoreSelectedFiles() {
+            try {
+                const savedFiles = localStorage.getItem('selectedFiles');
+                if (savedFiles) {
+                    const selectedFiles = JSON.parse(savedFiles);
+                    console.log('恢复勾选的文件列表:', selectedFiles);
+                    
+                    // 选中对应的复选框
+                    selectedFiles.forEach(filePath => {
+                        const checkbox = document.querySelector(`#fileList input[value="${filePath}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                    
+                    // 更新选择状态
+                    updateFileSelection();
+                    return true;
+                }
+            } catch (error) {
+                console.error('恢复勾选文件列表失败:', error);
+            }
+            return false;
+        }
+
+        // 全选文件
+        function selectAllFiles() {
+            const checkboxes = document.querySelectorAll('#fileList input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateFileSelection();
+        }
+
+        // 取消全选文件
+        function deselectAllFiles() {
+            const checkboxes = document.querySelectorAll('#fileList input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateFileSelection();
+        }
+
+        // 测试保存状态
+        function testSaveState() {
+            const selectedFiles = getSelectedFiles();
+            if (selectedFiles.length === 0) {
+                alert('请先选择一些文件');
+                return;
+            }
+            
+            saveSelectedFiles(selectedFiles);
+            alert(`已保存 ${selectedFiles.length} 个文件的勾选状态\n刷新页面后应该自动恢复`);
+        }
+
+        // 清除保存状态
+        function clearSavedState() {
+            localStorage.removeItem('selectedFiles');
+            updateStorageStatus();
+            alert('已清除保存的勾选状态');
+        }
+
+        // 更新存储状态显示
+        function updateStorageStatus() {
+            const storageStatus = document.getElementById('storageStatus');
+            try {
+                const savedFiles = localStorage.getItem('selectedFiles');
+                if (savedFiles) {
+                    const selectedFiles = JSON.parse(savedFiles);
+                    storageStatus.innerHTML = `<span class="text-success">已保存 ${selectedFiles.length} 个文件</span>`;
+                } else {
+                    storageStatus.innerHTML = '<span class="text-muted">无保存状态</span>';
+                }
+            } catch (error) {
+                storageStatus.innerHTML = '<span class="text-danger">状态读取失败</span>';
+            }
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>

@@ -33,6 +33,7 @@ type AuthConfig struct {
 type LogsConfig struct {
 	Directories      []string `mapstructure:"directories"` // 支持多个日志目录
 	Directory        string   `mapstructure:"directory"`   // 兼容旧版本，单个目录
+	FixedFiles       []string `mapstructure:"fixed_files"` // 确定的日志文件路径列表
 	Pattern          string   `mapstructure:"pattern"`
 	DefaultLines     int      `mapstructure:"default_lines"`
 	MaxSearchResults int      `mapstructure:"max_search_results"`
@@ -79,6 +80,11 @@ func LoadConfig() (*Config, error) {
 		fmt.Printf("  日志目录: %s\n", config.Logs.Directory)
 	} else {
 		fmt.Printf("  日志目录: ./logs (默认)\n")
+	}
+
+	// 显示固定文件路径信息
+	if len(config.Logs.FixedFiles) > 0 {
+		fmt.Printf("  固定文件: %v\n", config.Logs.FixedFiles)
 	}
 
 	fmt.Printf("  文件模式: %s\n", config.Logs.Pattern)

@@ -33,7 +33,51 @@ func GetLogFiles(c *gin.Context) {
 	// 添加调试信息
 	fmt.Printf("配置的日志目录: %s\n", cfg.Logs.Directory)
 	fmt.Printf("配置的文件模式: %s\n", cfg.Logs.Pattern)
+	fmt.Printf("配置的固定文件: %v\n", cfg.Logs.FixedFiles)
 
+	var logFiles []LogFile
+
+	// 首先处理固定文件路径
+	if len(cfg.Logs.FixedFiles) > 0 {
+		for _, fixedFile := range cfg.Logs.FixedFiles {
+			// 解析路径（支持相对路径和绝对路径）
+			var resolvedPath string
+			if filepath.IsAbs(fixedFile) {
+				// 绝对路径
+				resolvedPath = fixedFile
+			} else {
+				// 相对路径，相对于程序运行目录
+				absPath, err := filepath.Abs(fixedFile)
+				if err != nil {
+					fmt.Printf("解析固定文件路径失败 %s: %v\n", fixedFile, err)
+					continue
+				}
+				resolvedPath = absPath
+			}
+
+			// 检查文件是否存在
+			info, err := os.Stat(resolvedPath)
+			if err != nil {
+				fmt.Printf("固定文件不存在 %s: %v\n", resolvedPath, err)
+				continue
+			}
+
+			// 创建固定文件记录
+			logFile := LogFile{
+				Path:      fixedFile, // 使用配置中的原始路径作为显示路径
+				Name:      filepath.Base(resolvedPath),
+				FullPath:  resolvedPath,
+				Directory: "固定文件",
+				Size:      info.Size(),
+				ModTime:   info.ModTime().Format("2006-01-02 15:04:05"),
+			}
+
+			fmt.Printf("添加固定文件: %+v\n", logFile)
+			logFiles = append(logFiles, logFile)
+		}
+	}
+
+	// 然后处理扫描到的日志文件
 	files, err := cfg.GetLogFiles()
 	if err != nil {
 		fmt.Printf("获取日志文件错误: %v\n", err)
@@ -45,7 +89,6 @@ func GetLogFiles(c *gin.Context) {
 
 	fmt.Printf("找到的原始文件路径: %v\n", files)
 
-	var logFiles []LogFile
 	for _, file := range files {
 		info, err := os.Stat(file)
 		if err != nil {
@@ -107,9 +150,17 @@ func GetLogFiles(c *gin.Context) {
 		logFiles = append(logFiles, logFile)
 	}
 
-	// 按目录和文件名排序
+	// 按目录和文件名排序，固定文件始终在最前面
 	sort.Slice(logFiles, func(i, j int) bool {
-		// 首先按目录排序
+		// 固定文件始终在最前面
+		if logFiles[i].Directory == "固定文件" && logFiles[j].Directory != "固定文件" {
+			return true
+		}
+		if logFiles[i].Directory != "固定文件" && logFiles[j].Directory == "固定文件" {
+			return false
+		}
+
+		// 如果都是固定文件或都不是固定文件，按目录和文件名排序
 		if logFiles[i].Directory != logFiles[j].Directory {
 			return logFiles[i].Directory < logFiles[j].Directory
 		}
@@ -191,17 +242,18 @@ func GetLogContent(c *gin.Context) {
 
 // SearchRequest 搜索请求结构
 type SearchRequest struct {
-	File    string `json:"file" binding:"required"`    // 要搜索的文件路径
-	Pattern string `json:"pattern" binding:"required"` // 搜索模式
-	Reverse bool   `json:"reverse"`                    // 是否倒序搜索
-	Lines   int    `json:"lines"`                      // 限制返回结果的最大数量
+	Files   []string `json:"files" binding:"required"`   // 要搜索的文件路径列表
+	Pattern string   `json:"pattern" binding:"required"` // 搜索模式
+	Reverse bool     `json:"reverse"`                    // 是否倒序搜索
+	Lines   int      `json:"lines"`                      // 限制返回结果的最大数量
 }
 
 // SearchResult 搜索结果结构
 type SearchResult struct {
-	LineNumber int    `json:"line_number"`
-	Content    string `json:"content"`
-	File       string `json:"file"`
+	LineNumber int    `json:"line_number"` // 行号
+	Content    string `json:"content"`     // 行内容
+	File       string `json:"file"`        // 文件名
+	FilePath   string `json:"file_path"`   // 完整文件路径
 }
 
 // SearchLogs 搜索日志
@@ -215,23 +267,29 @@ func SearchLogs(c *gin.Context) {
 	}
 
 	// 添加调试信息
-	fmt.Printf("搜索请求: 文件=%s, 模式=%s, 倒序=%v, 最大返回结果数=%d\n", req.File, req.Pattern, req.Reverse, req.Lines)
+	fmt.Printf("搜索请求: 文件=%v, 模式=%s, 倒序=%v, 最大返回结果数=%d\n", req.Files, req.Pattern, req.Reverse, req.Lines)
 
-	// 验证文件路径安全性
-	absFilePath, err := validateFilePath(req.File)
-	if err != nil {
-		fmt.Printf("文件路径验证失败: %v\n", err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
-		return
+	// 验证所有文件路径安全性
+	var validFiles []string
+	for _, filePath := range req.Files {
+		absFilePath, err := validateFilePath(filePath)
+		if err != nil {
+			fmt.Printf("文件路径验证失败 %s: %v\n", filePath, err)
+			continue
+		}
+
+		// 检查文件是否存在
+		if _, err := os.Stat(absFilePath); os.IsNotExist(err) {
+			fmt.Printf("搜索文件不存在: %s\n", absFilePath)
+			continue
+		}
+
+		validFiles = append(validFiles, absFilePath)
 	}
 
-	// 检查文件是否存在
-	if _, err := os.Stat(absFilePath); os.IsNotExist(err) {
-		fmt.Printf("搜索文件不存在: %s\n", absFilePath)
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": fmt.Sprintf("文件不存在: %s", filepath.Base(absFilePath)),
+	if len(validFiles) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "没有找到有效的文件进行搜索",
 		})
 		return
 	}
@@ -245,11 +303,10 @@ func SearchLogs(c *gin.Context) {
 		return
 	}
 
-	// 搜索日志
-	// req.Lines参数用于限制返回结果的最大数量，搜索会在整个文件范围内进行
-	results, err := searchInFileAdvanced(absFilePath, searchQuery, config.GetConfig().Logs.MaxSearchResults, req.Reverse, req.Lines)
+	// 在所有有效文件中搜索
+	allResults, err := searchInMultipleFiles(validFiles, searchQuery, config.GetConfig().Logs.MaxSearchResults, req.Reverse, req.Lines)
 	if err != nil {
-		fmt.Printf("搜索文件失败: %v\n", err)
+		fmt.Printf("批量搜索失败: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("搜索失败: %v", err),
 		})
@@ -257,9 +314,9 @@ func SearchLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"results": results,
-		"count":   len(results),
-		"file":    filepath.Base(absFilePath),
+		"results": allResults,
+		"count":   len(allResults),
+		"files":   req.Files,
 	})
 }
 
@@ -507,7 +564,8 @@ func searchInFileAdvanced(filePath string, query *SearchQuery, maxResults int, r
 			results = append(results, SearchResult{
 				LineNumber: lineNum,
 				Content:    strings.TrimSpace(line),
-				File:       filePath,
+				File:       filepath.Base(filePath), // 只显示文件名，不显示完整路径
+				FilePath:   filePath,                // 完整文件路径
 			})
 
 			// 使用maxLines参数限制返回结果数量，而不是maxResults
@@ -529,6 +587,39 @@ func searchInFileAdvanced(filePath string, query *SearchQuery, maxResults int, r
 	}
 
 	return results, nil
+}
+
+// searchInMultipleFiles 在多个文件中搜索
+func searchInMultipleFiles(filePaths []string, query *SearchQuery, maxResults int, reverse bool, maxLines int) ([]SearchResult, error) {
+	var allResults []SearchResult
+
+	for _, filePath := range filePaths {
+		results, err := searchInFileAdvanced(filePath, query, maxResults, reverse, maxLines)
+		if err != nil {
+			fmt.Printf("搜索文件失败 %s: %v\n", filePath, err)
+			continue
+		}
+
+		allResults = append(allResults, results...)
+	}
+
+	// 限制总结果数量
+	if maxLines > 0 && len(allResults) > maxLines {
+		allResults = allResults[:maxLines]
+	}
+
+	// 按行号排序
+	if reverse {
+		sort.Slice(allResults, func(i, j int) bool {
+			return allResults[i].LineNumber > allResults[j].LineNumber
+		})
+	} else {
+		sort.Slice(allResults, func(i, j int) bool {
+			return allResults[i].LineNumber < allResults[j].LineNumber
+		})
+	}
+
+	return allResults, nil
 }
 
 // matchesSearchQuery 检查行是否匹配搜索查询
@@ -631,7 +722,8 @@ func searchInFile(filePath string, regex *regexp.Regexp, maxResults int) ([]Sear
 			results = append(results, SearchResult{
 				LineNumber: lineNumber,
 				Content:    strings.TrimSpace(line),
-				File:       filePath,
+				File:       filepath.Base(filePath),
+				FilePath:   filePath,
 			})
 
 			if len(results) >= maxResults {
@@ -679,7 +771,16 @@ func validateFilePath(filePath string) (string, error) {
 	// 如果提供的是相对路径，尝试在所有日志目录中查找
 	if !filepath.IsAbs(cleanPath) {
 		for _, dir := range directories {
-			fullPath := filepath.Join(dir, cleanPath)
+			// 处理相对路径的特殊情况
+			var fullPath string
+			if strings.HasPrefix(cleanPath, "logs") && (dir == "./logs" || dir == "logs") {
+				// 如果清理后的路径以"logs"开头，且目录是"./logs"或"logs"，直接使用清理后的路径
+				fullPath = cleanPath
+			} else {
+				// 否则使用filepath.Join组合路径
+				fullPath = filepath.Join(dir, cleanPath)
+			}
+
 			fmt.Printf("尝试路径: %s\n", fullPath)
 
 			if _, err := os.Stat(fullPath); err == nil {

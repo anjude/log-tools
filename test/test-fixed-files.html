@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>固定文件路径功能测试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .file-item {
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .file-item:hover {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+        .file-item .form-check-input {
+            margin-top: 0;
+            cursor: pointer;
+        }
+        .file-item .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+        .file-item:hover .form-check-input {
+            border-color: #667eea;
+        }
+        
+        /* 固定文件特殊样式 */
+        .file-item.fixed-file {
+            background-color: #fff3cd;
+            border-left: 3px solid #ffc107;
+        }
+        
+        .file-item.fixed-file:hover {
+            background-color: #ffeaa7;
+            border-color: #f39c12;
+        }
+        
+        .file-item.fixed-file .form-check-input:checked {
+            background-color: #ffc107;
+            border-color: #ffc107;
+        }
+        
+        .file-info-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .file-name-section {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #212529;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+        .file-info {
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .file-time {
+            color: #6c757d;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            flex-shrink: 0;
+        }
+        .file-path-info {
+            color: #6c757d;
+            font-size: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+            display: inline-block;
+            vertical-align: bottom;
+        }
+        .directory-header {
+            font-weight: 600;
+            color: #495057;
+            padding: 4px 0;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 8px;
+        }
+        .directory-header.fixed-files {
+            color: #856404;
+        }
+        .test-info {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .test-info h5 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .test-info ul {
+            margin-bottom: 0;
+        }
+        .test-info li {
+            margin-bottom: 5px;
+        }
+        .config-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .config-info h5 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="test-info">
+            <h5>🧪 固定文件路径功能测试</h5>
+            <ul>
+                <li><strong>配置固定路径</strong>：在 config.yaml 中配置 fixed_files 列表</li>
+                <li><strong>支持路径类型</strong>：支持相对路径和绝对路径</li>
+                <li><strong>优先显示</strong>：固定文件会显示在文件列表最前面</li>
+                <li><strong>特殊标识</strong>：固定文件有特殊的视觉样式和"固定"标签</li>
+            </ul>
+        </div>
+        
+        <div class="config-info">
+            <h5>📋 配置文件示例</h5>
+            <pre class="mb-0"><code>logs:
+  fixed_files:
+    - "./logs/app.log"
+    - "./logs/error.log"
+    - "/var/log/nginx/access.log  # 绝对路径示例</code></pre>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">模拟文件列表</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="fileList">
+                            <!-- 模拟文件列表 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">功能说明</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6>固定文件特性：</h6>
+                            <ul class="mb-0">
+                                <li>⭐ 显示在文件列表最前面</li>
+                                <li>🟡 特殊的黄色背景和边框</li>
+                                <li>🏷️ 显示"固定"标签</li>
+                                <li>📁 目录显示为"固定文件"</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6>普通文件特性：</h6>
+                            <ul class="mb-0">
+                                <li>📄 显示在固定文件后面</li>
+                                <li>⚪ 标准样式</li>
+                                <li>📁 按目录分组显示</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <strong>测试说明：</strong>
+                            <p class="mb-0">此页面模拟了固定文件路径功能的效果。在实际使用中，固定文件路径需要在 config.yaml 中配置。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟文件数据（包含固定文件和普通文件）
+        const mockFiles = [
+            // 固定文件（会显示在最前面）
+            {
+                path: "./logs/app.log",
+                name: "app.log",
+                size: 1024000,
+                mod_time: "2025-01-20 10:30:00",
+                directory: "固定文件",
+                isFixed: true
+            },
+            {
+                path: "./logs/error.log",
+                name: "error.log",
+                size: 512000,
+                mod_time: "2025-01-20 10:25:00",
+                directory: "固定文件",
+                isFixed: true
+            },
+            {
+                path: "/var/log/nginx/access.log",
+                name: "access.log",
+                size: 2048000,
+                mod_time: "2025-01-20 10:20:00",
+                directory: "固定文件",
+                isFixed: true
+            },
+            // 普通文件（按目录分组）
+            {
+                path: "logs/debug.log",
+                name: "debug.log",
+                size: 1536000,
+                mod_time: "2025-01-20 10:15:00",
+                directory: "根目录",
+                isFixed: false
+            },
+            {
+                path: "logs/system.log",
+                name: "system.log",
+                size: 3072000,
+                mod_time: "2025-01-20 10:10:00",
+                directory: "根目录",
+                isFixed: false
+            },
+            {
+                path: "logs/backup/archive.log",
+                name: "archive.log",
+                size: 5120000,
+                mod_time: "2025-01-20 10:05:00",
+                directory: "backup",
+                isFixed: false
+            }
+        ];
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            displayFileList();
+        });
+
+        // 显示文件列表
+        function displayFileList() {
+            const fileList = document.getElementById('fileList');
+            let html = '';
+            let currentDirectory = '';
+            
+            mockFiles.forEach(file => {
+                const size = formatFileSize(file.size);
+                const fullPath = file.path;
+                
+                // 如果是新目录，添加目录标题
+                if (file.directory !== currentDirectory) {
+                    currentDirectory = file.directory;
+                    const icon = file.directory === '固定文件' ? 'bi-star-fill' : 'bi-folder';
+                    const color = file.directory === '固定文件' ? 'text-warning' : 'text-muted';
+                    html += `<div class="directory-header ${color} small mb-2"><i class="bi ${icon}"></i> ${file.directory}</div>`;
+                }
+                
+                const isFixedFile = file.isFixed;
+                const fileItemClass = isFixedFile ? 'file-item fixed-file' : 'file-item';
+                const fileIconClass = isFixedFile ? 'bi-star-fill text-warning' : 'bi-file-text text-primary';
+                
+                html += `
+                    <div class="${fileItemClass}" onclick="selectFile('${file.path}', event)" title="${fullPath}">
+                        <div class="file-info-container">
+                            <div class="d-flex align-items-center">
+                                <input type="checkbox" class="form-check-input me-2" value="${file.path}" 
+                                       onchange="updateFileSelection()" style="pointer-events: none;">
+                                <div class="file-name-section">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi ${fileIconClass} me-2"></i>
+                                        <span class="file-name">${file.name}</span>
+                                        ${isFixedFile ? '<span class="badge bg-warning text-dark ms-2">固定</span>' : ''}
+                                    </div>
+                                    <div class="file-info">
+                                        <span class="file-time">${file.mod_time}</span>
+                                        <span class="badge bg-light text-dark">${size}</span>
+                                        <span class="text-muted small file-path-info" title="${file.path}">${file.path}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            fileList.innerHTML = html;
+        }
+
+        // 选择文件
+        function selectFile(filePath, event) {
+            if (event && event.currentTarget) {
+                const checkbox = event.currentTarget.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    updateFileSelection();
+                }
+            }
+        }
+
+        // 更新文件选择状态
+        function updateFileSelection() {
+            const selectedFiles = getSelectedFiles();
+            console.log('当前选中的文件:', selectedFiles);
+        }
+
+        // 获取选中的文件列表
+        function getSelectedFiles() {
+            const checkboxes = document.querySelectorAll('#fileList input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
