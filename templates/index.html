@@ -147,42 +147,87 @@
             white-space: nowrap;
             flex-shrink: 0;
         }
-        /* 文件路径显示样式 - 增加宽度以显示更长的路径信息 */
+        /* 文件路径显示样式 - 优化长路径显示 */
         .file-path-info {
             color: #6c757d;
             font-size: 10px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 320px; /* 进一步增加宽度以显示更长的路径信息 */
+            max-width: 200px; /* 限制最大宽度，确保界面整洁 */
             display: inline-block;
             vertical-align: bottom;
+            cursor: help; /* 鼠标悬浮时显示帮助光标 */
+            position: relative; /* 为tooltip定位做准备 */
         }
-        /* 优化文件项的整体布局 - 更好地利用增加的空间 */
-        .file-item .file-info-container {
+        
+        /* 文件路径tooltip样式 */
+        .file-path-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .file-path-tooltip.show {
+            opacity: 1;
+        }
+        /* 文件项布局 - 复选框固定在左侧 */
+        .file-item-layout {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            width: 100%;
+        }
+        
+        .checkbox-container {
+            flex-shrink: 0;
+            width: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 2px;
+        }
+        
+        .file-info-container {
+            flex: 1;
             display: flex;
             flex-direction: column;
             gap: 4px;
-            width: 100%;
+            min-width: 0;
         }
-        .file-item .file-name-section {
+        
+        .file-name-section {
             display: flex;
             align-items: center;
-            gap: 10px; /* 增加间距，让路径信息有更多显示空间 */
+            gap: 10px;
             width: 100%;
         }
-        .file-item .file-info {
+        
+        .file-info {
             display: flex;
             align-items: center;
-            gap: 10px; /* 增加间距，让路径信息有更多显示空间 */
+            gap: 10px;
             flex-wrap: nowrap;
             width: 100%;
         }
+        
         /* 确保文件信息在一行内显示，优化空间利用 */
-        .file-item .file-info > * {
+        .file-info > * {
             flex-shrink: 0;
         }
-        .file-item .file-info .text-muted.small {
+        
+        .file-info .text-muted.small {
             flex: 1;
             min-width: 0;
             overflow: hidden;
@@ -191,17 +236,19 @@
         }
         
         /* 多文件选择样式 */
-        .file-item .form-check-input {
-            margin-top: 0;
+        .checkbox-container .form-check-input {
+            margin: 0;
             cursor: pointer;
+            width: 16px;
+            height: 16px;
         }
         
-        .file-item .form-check-input:checked {
+        .checkbox-container .form-check-input:checked {
             background-color: #667eea;
             border-color: #667eea;
         }
         
-        .file-item:hover .form-check-input {
+        .file-item:hover .checkbox-container .form-check-input {
             border-color: #667eea;
         }
         
@@ -216,7 +263,7 @@
             border-color: #f39c12;
         }
         
-        .file-item.fixed-file .form-check-input:checked {
+        .file-item.fixed-file .checkbox-container .form-check-input:checked {
             background-color: #ffc107;
             border-color: #ffc107;
         }
@@ -280,35 +327,85 @@
             padding-left: 5px;
             padding-right: 5px;
         }
-        /* 增加日志文件列表宽度，减少左侧空白 */
-        .col-md-3 {
-            flex: 0 0 auto;
-            width: 35%; /* 增加宽度，减少左侧空白 */
+        
+        /* 支持拖拽调节宽度的布局 */
+        .main-layout {
+            display: flex;
+            gap: 0;
+            position: relative;
         }
-        .col-md-9 {
+        
+        .file-panel {
             flex: 0 0 auto;
-            width: 65%; /* 相应减少宽度 */
+            width: 35%; /* 默认宽度 */
+            min-width: 250px; /* 最小宽度 */
+            max-width: 50%; /* 最大宽度 */
+            transition: width 0.1s ease;
         }
+        
+        .content-panel {
+            flex: 1;
+            min-width: 400px; /* 最小宽度 */
+        }
+        
+        /* 拖拽分隔线样式 */
+        .resize-handle {
+            width: 6px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: col-resize;
+            position: relative;
+            transition: background 0.2s ease;
+            border-radius: 3px;
+            margin: 0 2px;
+        }
+        
+        .resize-handle:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            box-shadow: 0 0 8px rgba(102, 126, 234, 0.4);
+        }
+        
+        .resize-handle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 1px;
+        }
+        
+        /* 拖拽时的样式 */
+        .resizing {
+            cursor: col-resize;
+            user-select: none;
+        }
+        
+        .resizing .resize-handle {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        
         /* 在小屏幕上调整布局 */
         @media (max-width: 1200px) {
-            .col-md-3 {
+            .file-panel {
                 width: 38%;
             }
-            .col-md-9 {
-                width: 62%;
-            }
         }
+        
         @media (max-width: 768px) {
-            .col-md-3 {
+            .main-layout {
+                flex-direction: column;
+            }
+            .file-panel {
                 width: 100%;
                 margin-bottom: 15px;
             }
-            .col-md-9 {
+            .content-panel {
                 width: 100%;
             }
-            .container {
-                padding-left: 5px;
-                padding-right: 5px;
+            .resize-handle {
+                display: none;
             }
         }
         /* 优化文件项布局，确保一行显示 */
@@ -467,9 +564,9 @@
     </nav>
 
     <div class="container mt-4">
-        <div class="row">
+        <div class="main-layout">
             <!-- 左侧：日志文件列表 -->
-            <div class="col-md-3">
+            <div class="file-panel">
                 <div class="card">
                     <div class="card-header">
                         <h6 class="mb-0">
@@ -498,8 +595,11 @@
                 </div>
             </div>
 
+            <!-- 拖拽分隔线 -->
+            <div class="resize-handle" id="resizeHandle"></div>
+
             <!-- 右侧：主界面 -->
-            <div class="col-md-9">
+            <div class="content-panel">
                 <!-- 搜索和配置区域 -->
                 <div class="card mb-3">
                     <div class="card-header">
@@ -733,10 +833,12 @@
                      
                      html += `
                          <div class="${fileItemClass}" onclick="selectFile('${file.path}', event)" title="${fullPath}">
-                             <div class="file-info-container">
-                                 <div class="d-flex align-items-center">
-                                     <input type="checkbox" class="form-check-input me-2" value="${file.path}" 
+                             <div class="file-item-layout">
+                                 <div class="checkbox-container">
+                                     <input type="checkbox" class="form-check-input" value="${file.path}" 
                                             onchange="updateFileSelection()" style="pointer-events: none;">
+                                 </div>
+                                 <div class="file-info-container">
                                      <div class="file-name-section">
                                          <div class="d-flex align-items-center">
                                              <i class="bi ${fileIconClass} me-2"></i>
@@ -746,7 +848,12 @@
                                          <div class="file-info">
                                              <span class="file-time">${modTime}</span>
                                              <span class="badge bg-light text-dark">${size}</span>
-                                             <span class="text-muted small file-path-info" title="${file.path}">${file.path}</span>
+                                             <span class="text-muted small file-path-info" 
+                                                   data-full-path="${file.path}" 
+                                                   onmouseenter="showPathTooltip(this, event)" 
+                                                   onmouseleave="hidePathTooltip(this)">
+                                                   ${file.path}
+                                             </span>
                                          </div>
                                      </div>
                                  </div>
@@ -1358,6 +1465,131 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
+
+        // 显示文件路径tooltip
+        function showPathTooltip(element, event) {
+            const fullPath = element.getAttribute('data-full-path');
+            if (!fullPath) return;
+
+            // 移除已存在的tooltip
+            const existingTooltip = document.querySelector('.file-path-tooltip');
+            if (existingTooltip) {
+                existingTooltip.remove();
+            }
+
+            // 创建新的tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'file-path-tooltip';
+            tooltip.textContent = fullPath;
+            document.body.appendChild(tooltip);
+
+            // 计算tooltip位置
+            const rect = element.getBoundingClientRect();
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+            // 优先显示在元素下方，如果空间不够则显示在上方
+            let top = rect.bottom + scrollTop + 5;
+            if (top + tooltip.offsetHeight > window.innerHeight + scrollTop) {
+                top = rect.top + scrollTop - tooltip.offsetHeight - 5;
+            }
+
+            // 水平居中显示
+            let left = rect.left + scrollLeft + (rect.width / 2) - (tooltip.offsetWidth / 2);
+            if (left < scrollLeft) {
+                left = scrollLeft + 5;
+            } else if (left + tooltip.offsetWidth > window.innerWidth + scrollLeft) {
+                left = window.innerWidth + scrollLeft - tooltip.offsetWidth - 5;
+            }
+
+            tooltip.style.top = top + 'px';
+            tooltip.style.left = left + 'px';
+
+            // 显示tooltip
+            setTimeout(() => {
+                tooltip.classList.add('show');
+            }, 100);
+        }
+
+        // 隐藏文件路径tooltip
+        function hidePathTooltip(element) {
+            const tooltip = document.querySelector('.file-path-tooltip');
+            if (tooltip) {
+                tooltip.classList.remove('show');
+                setTimeout(() => {
+                    if (tooltip.parentNode) {
+                        tooltip.remove();
+                    }
+                }, 200);
+            }
+        }
+
+        // 拖拽调节宽度功能
+        function initResizeHandle() {
+            const resizeHandle = document.getElementById('resizeHandle');
+            const filePanel = document.querySelector('.file-panel');
+            const mainLayout = document.querySelector('.main-layout');
+            
+            if (!resizeHandle || !filePanel || !mainLayout) return;
+
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+
+            // 鼠标按下事件
+            resizeHandle.addEventListener('mousedown', function(e) {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = filePanel.offsetWidth;
+                
+                mainLayout.classList.add('resizing');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                
+                e.preventDefault();
+            });
+
+            // 鼠标移动事件
+            document.addEventListener('mousemove', function(e) {
+                if (!isResizing) return;
+                
+                const deltaX = e.clientX - startX;
+                const newWidth = Math.max(250, startWidth + deltaX); // 限制最小250px
+                
+                filePanel.style.width = newWidth + 'px';
+            });
+
+            // 鼠标释放事件
+            document.addEventListener('mouseup', function() {
+                if (!isResizing) return;
+                
+                isResizing = false;
+                mainLayout.classList.remove('resizing');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                
+                // 保存宽度到本地存储
+                const width = filePanel.offsetWidth;
+                localStorage.setItem('filePanelWidth', width + 'px');
+            });
+
+            // 双击重置宽度
+            resizeHandle.addEventListener('dblclick', function() {
+                filePanel.style.width = '35%';
+                localStorage.removeItem('filePanelWidth');
+            });
+
+            // 页面加载时恢复保存的宽度
+            const savedWidth = localStorage.getItem('filePanelWidth');
+            if (savedWidth) {
+                filePanel.style.width = savedWidth;
+            }
+        }
+
+        // 页面加载完成后初始化拖拽功能
+        document.addEventListener('DOMContentLoaded', function() {
+            initResizeHandle();
+        });
     </script>
 </body>
 </html>

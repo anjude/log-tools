@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试拖拽调节宽度功能</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 1800px;
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+        
+        /* 支持拖拽调节宽度的布局 */
+        .main-layout {
+            display: flex;
+            gap: 0;
+            position: relative;
+        }
+        
+        .file-panel {
+            flex: 0 0 auto;
+            width: 35%;
+            min-width: 250px;
+            max-width: 50%;
+            transition: width 0.1s ease;
+        }
+        
+        .content-panel {
+            flex: 1;
+            min-width: 400px;
+        }
+        
+        /* 拖拽分隔线样式 */
+        .resize-handle {
+            width: 6px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: col-resize;
+            position: relative;
+            transition: background 0.2s ease;
+            border-radius: 3px;
+            margin: 0 2px;
+        }
+        
+        .resize-handle:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            box-shadow: 0 0 8px rgba(102, 126, 234, 0.4);
+        }
+        
+        .resize-handle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 1px;
+        }
+        
+        /* 拖拽时的样式 */
+        .resizing {
+            cursor: col-resize;
+            user-select: none;
+        }
+        
+        .resizing .resize-handle {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px 8px 0 0 !important;
+            border: none;
+            padding: 8px 15px;
+        }
+        
+        .card-header h6 {
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        .card-body {
+            padding: 12px;
+        }
+        
+        .file-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
+        .file-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(2px);
+            border-color: #dee2e6;
+        }
+        
+        .file-item.active {
+            background-color: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+        
+        .log-content {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            min-height: 400px;
+            line-height: 1.4;
+        }
+        
+        @media (max-width: 768px) {
+            .main-layout {
+                flex-direction: column;
+            }
+            .file-panel {
+                width: 100%;
+                margin-bottom: 15px;
+            }
+            .content-panel {
+                width: 100%;
+            }
+            .resize-handle {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="bi bi-file-text"></i> 日志工具 - 拖拽调节宽度测试
+            </span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="main-layout">
+            <!-- 左侧：日志文件列表 -->
+            <div class="file-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-folder2-open"></i> 日志文件
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <input type="text" class="form-control form-control-sm" placeholder="搜索文件...">
+                        </div>
+                        <div class="mb-2 d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-check-all"></i> 全选
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> 取消全选
+                            </button>
+                        </div>
+                        <div>
+                            <div class="file-item active">
+                                <strong>app.log</strong><br>
+                                <small class="text-muted">2024-01-15 10:30:45 • 2.5 MB</small>
+                            </div>
+                            <div class="file-item">
+                                <strong>error.log</strong><br>
+                                <small class="text-muted">2024-01-15 09:15:22 • 1.8 MB</small>
+                            </div>
+                            <div class="file-item">
+                                <strong>access.log</strong><br>
+                                <small class="text-muted">2024-01-15 08:45:10 • 3.2 MB</small>
+                            </div>
+                            <div class="file-item">
+                                <strong>debug.log</strong><br>
+                                <small class="text-muted">2024-01-15 07:20:33 • 1.1 MB</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 拖拽分隔线 -->
+            <div class="resize-handle" id="resizeHandle"></div>
+
+            <!-- 右侧：主界面 -->
+            <div class="content-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-search"></i> 搜索配置
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" placeholder="输入搜索关键词...">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary">
+                                <i class="bi bi-search"></i> 搜索
+                            </button>
+                            <button class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> 清除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-file-text"></i> 日志内容
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="log-content">
+                            <div class="text-muted text-center">
+                                <p>拖拽左侧的蓝色分隔线来调节日志文件栏的宽度</p>
+                                <p>双击分隔线可以重置为默认宽度</p>
+                                <p>宽度设置会自动保存到本地存储</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 拖拽调节宽度功能
+        function initResizeHandle() {
+            const resizeHandle = document.getElementById('resizeHandle');
+            const filePanel = document.querySelector('.file-panel');
+            const mainLayout = document.querySelector('.main-layout');
+            
+            if (!resizeHandle || !filePanel || !mainLayout) return;
+
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+
+            // 鼠标按下事件
+            resizeHandle.addEventListener('mousedown', function(e) {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = filePanel.offsetWidth;
+                
+                mainLayout.classList.add('resizing');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                
+                e.preventDefault();
+            });
+
+            // 鼠标移动事件
+            document.addEventListener('mousemove', function(e) {
+                if (!isResizing) return;
+                
+                const deltaX = e.clientX - startX;
+                const newWidth = Math.max(250, startWidth + deltaX);
+                
+                filePanel.style.width = newWidth + 'px';
+            });
+
+            // 鼠标释放事件
+            document.addEventListener('mouseup', function() {
+                if (!isResizing) return;
+                
+                isResizing = false;
+                mainLayout.classList.remove('resizing');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                
+                // 保存宽度到本地存储
+                const width = filePanel.offsetWidth;
+                localStorage.setItem('filePanelWidth', width + 'px');
+            });
+
+            // 双击重置宽度
+            resizeHandle.addEventListener('dblclick', function() {
+                filePanel.style.width = '35%';
+                localStorage.removeItem('filePanelWidth');
+            });
+
+            // 页面加载时恢复保存的宽度
+            const savedWidth = localStorage.getItem('filePanelWidth');
+            if (savedWidth) {
+                filePanel.style.width = savedWidth;
+            }
+        }
+
+        // 页面加载完成后初始化拖拽功能
+        document.addEventListener('DOMContentLoaded', function() {
+            initResizeHandle();
+        });
+    </script>
+</body>
+</html>
