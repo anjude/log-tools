@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日志管理工具新功能演示</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-size: 14px;
+        }
+        .demo-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .feature-title {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .file-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 6px 8px;
+            border-radius: 4px;
+            margin-bottom: 3px;
+            border: 1px solid transparent;
+        }
+        .file-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(2px);
+            border-color: #dee2e6;
+        }
+        .directory-header {
+            font-weight: 600;
+            color: #495057;
+            padding: 4px 0;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 8px;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #212529;
+        }
+        .file-info {
+            margin-top: 2px;
+        }
+        .file-info .badge {
+            font-size: 10px;
+            padding: 2px 6px;
+        }
+        .search-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">
+                    <i class="bi bi-journal-text text-primary"></i>
+                    日志管理工具新功能演示
+                </h1>
+                
+                <!-- 功能概览 -->
+                <div class="demo-section">
+                    <h3 class="feature-title">🎯 新功能概览</h3>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <i class="bi bi-layout-text-window text-primary" style="font-size: 3rem;"></i>
+                                <h5 class="mt-2">紧凑显示</h5>
+                                <p class="text-muted">每个日志文件一行，节省空间</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <i class="bi bi-search text-success" style="font-size: 3rem;"></i>
+                                <h5 class="mt-2">文件搜索</h5>
+                                <p class="text-muted">实时搜索过滤文件列表</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <i class="bi bi-folder2-open text-warning" style="font-size: 3rem;"></i>
+                                <h5 class="mt-2">完整路径</h5>
+                                <p class="text-muted">显示完整文件路径和目录结构</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 功能1：紧凑显示 -->
+                <div class="demo-section">
+                    <h3 class="feature-title">📱 功能1：日志文件区域紧凑显示</h3>
+                    <p>每个日志文件现在只占用一行，大大节省了垂直空间，文件信息更加紧凑。</p>
+                    
+                    <div class="search-box">
+                        <h6><i class="bi bi-folder2-open"></i> 日志文件列表（紧凑显示）</h6>
+                        <div class="mb-3">
+                            <input type="text" class="form-control form-control-sm" id="fileSearchInput" 
+                                   placeholder="搜索文件..." oninput="filterFiles()">
+                        </div>
+                        <div id="fileList">
+                            <!-- 文件列表将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 功能2：文件搜索 -->
+                <div class="demo-section">
+                    <h3 class="feature-title">🔍 功能2：日志文件列表搜索功能</h3>
+                    <p>在文件列表顶部添加了搜索输入框，支持按文件名和路径搜索，实时过滤结果。</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>搜索特性：</h6>
+                            <ul>
+                                <li>实时搜索，输入时即时过滤</li>
+                                <li>支持文件名搜索</li>
+                                <li>支持完整路径搜索</li>
+                                <li>智能显示/隐藏目录标题</li>
+                                <li>不区分大小写</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>搜索示例：</h6>
+                            <div class="code-block">
+输入 "app" → 找到所有包含 "app" 的文件<br>
+输入 "error" → 找到所有包含 "error" 的文件<br>
+输入 "logs" → 找到路径中包含 "logs" 的文件<br>
+清空搜索框 → 恢复显示所有文件
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 功能3：完整路径 -->
+                <div class="demo-section">
+                    <h3 class="feature-title">📁 功能3：完整文件路径显示</h3>
+                    <p>鼠标悬停在文件上可看到完整文件路径，文件按目录分组显示，便于管理。</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>显示信息：</h6>
+                            <ul>
+                                <li><strong>文件名</strong>：显示日志文件的基本名称</li>
+                                <li><strong>修改时间</strong>：显示文件的最后修改时间</li>
+                                <li><strong>文件大小</strong>：显示文件大小（自动格式化）</li>
+                                <li><strong>完整路径</strong>：鼠标悬停显示完整文件路径</li>
+                                <li><strong>所属目录</strong>：按目录分组显示文件</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>排序逻辑：</h6>
+                            <div class="code-block">
+1. 首先按目录名称排序<br>
+2. 同一目录内按文件名排序<br>
+3. 提供更直观的文件组织结构
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 技术实现 -->
+                <div class="demo-section">
+                    <h3 class="feature-title">⚙️ 技术实现</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>后端改进：</h6>
+                            <div class="code-block">
+type LogFile struct {
+    Path         string // 相对路径
+    Name         string // 文件名
+    FullPath     string // 完整文件路径
+    Directory    string // 所属目录
+    Size         int64
+    ModTime      string
+}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>前端改进：</h6>
+                            <ul>
+                                <li>紧凑的单行显示</li>
+                                <li>目录标题分组</li>
+                                <li>文件图标和状态指示</li>
+                                <li>实时搜索过滤</li>
+                                <li>悬停效果和视觉层次</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 使用方法 -->
+                <div class="demo-section">
+                    <h3 class="feature-title">🚀 使用方法</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>启动服务：</h6>
+                            <div class="code-block">
+# 编译并运行
+go build -o log-tools.exe .
+./log-tools.exe
+
+# 或直接运行
+go run .
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>访问界面：</h6>
+                            <ol>
+                                <li>打开浏览器访问 <code>http://localhost:6003</code></li>
+                                <li>使用配置的用户名和密码登录</li>
+                                <li>在左侧文件列表中使用搜索功能</li>
+                                <li>点击文件查看日志内容</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 模拟文件数据
+        const mockFiles = [
+            {
+                path: "app.log",
+                name: "app.log",
+                full_path: "E:\\workspace\\bean-milk\\log-tools\\logs\\app.log",
+                directory: "根目录",
+                size: 2560,
+                mod_time: "2024-01-01 10:00:00"
+            },
+            {
+                path: "error.log",
+                name: "error.log",
+                full_path: "E:\\workspace\\bean-milk\\log-tools\\logs\\error.log",
+                directory: "根目录",
+                size: 1843,
+                mod_time: "2024-01-01 09:30:00"
+            },
+            {
+                path: "backup/backup.log",
+                name: "backup.log",
+                full_path: "E:\\workspace\\bean-milk\\log-tools\\logs\\backup\\backup.log",
+                directory: "backup",
+                size: 5240,
+                mod_time: "2024-01-01 08:00:00"
+            },
+            {
+                path: "system/system.log",
+                name: "system.log",
+                full_path: "E:\\workspace\\bean-milk\\log-tools\\logs\\system\\system.log",
+                directory: "system",
+                size: 3120,
+                mod_time: "2024-01-01 07:30:00"
+            },
+            {
+                path: "database/db.log",
+                name: "db.log",
+                full_path: "E:\\workspace\\bean-milk\\log-tools\\logs\\database\\db.log",
+                directory: "database",
+                size: 4560,
+                mod_time: "2024-01-01 06:00:00"
+            }
+        ];
+
+        // 显示文件列表
+        function displayFileList(files) {
+            const fileList = document.getElementById('fileList');
+            
+            if (!files || files.length === 0) {
+                fileList.innerHTML = '<div class="text-muted text-center">没有找到日志文件</div>';
+                return;
+            }
+            
+            let html = '';
+            let currentDirectory = '';
+            
+            files.forEach(file => {
+                const size = formatFileSize(file.size || 0);
+                const modTime = file.mod_time || '未知时间';
+                const directory = file.directory || '根目录';
+                const fullPath = file.full_path || file.path;
+                
+                // 如果是新目录，添加目录标题
+                if (directory !== currentDirectory) {
+                    currentDirectory = directory;
+                    html += `<div class="directory-header"><i class="bi bi-folder"></i> ${directory}</div>`;
+                }
+                
+                html += `
+                    <div class="file-item" title="${fullPath}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-file-text text-primary me-2"></i>
+                                    <span class="file-name">${file.name}</span>
+                                </div>
+                                <div class="file-info small text-muted">
+                                    <span class="me-2">${modTime}</span>
+                                    <span class="badge bg-light text-dark">${size}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            fileList.innerHTML = html;
+        }
+
+        // 文件搜索过滤
+        function filterFiles() {
+            const searchInput = document.getElementById('fileSearchInput');
+            const fileList = document.getElementById('fileList');
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                // 如果搜索框为空，显示所有文件
+                Array.from(fileList.children).forEach(item => {
+                    item.style.display = 'block';
+                });
+                return;
+            }
+            
+            const items = Array.from(fileList.children);
+            let hasVisibleFiles = false;
+            
+            items.forEach(item => {
+                if (item.classList.contains('directory-header')) {
+                    // 处理目录标题
+                    const directoryName = item.textContent.toLowerCase();
+                    const isMatch = directoryName.includes(searchTerm);
+                    item.style.display = isMatch ? 'block' : 'none';
+                } else if (item.classList.contains('file-item')) {
+                    // 处理文件项
+                    const fileName = item.querySelector('.file-name')?.textContent.toLowerCase() || '';
+                    const filePath = item.title.toLowerCase(); // 完整路径
+                    const isMatch = fileName.includes(searchTerm) || filePath.includes(searchTerm);
+                    item.style.display = isMatch ? 'block' : 'none';
+                    
+                    if (isMatch) {
+                        hasVisibleFiles = true;
+                    }
+                }
+            });
+            
+            // 如果没有匹配的文件，显示提示信息
+            if (!hasVisibleFiles) {
+                const noResults = fileList.querySelector('.no-results');
+                if (!noResults) {
+                    const noResultsDiv = document.createElement('div');
+                    noResultsDiv.className = 'no-results text-muted text-center mt-3';
+                    noResultsDiv.innerHTML = `<i class="bi bi-search"></i> 没有找到匹配的文件`;
+                    fileList.appendChild(noResultsDiv);
+                }
+            } else {
+                // 移除"没有结果"提示
+                const noResults = fileList.querySelector('.no-results');
+                if (noResults) {
+                    noResults.remove();
+                }
+            }
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 页面加载时显示文件列表
+        document.addEventListener('DOMContentLoaded', function() {
+            displayFileList(mockFiles);
+        });
+    </script>
+</body>
+</html>

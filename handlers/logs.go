@@ -18,10 +18,12 @@ import (
 
 // LogFile 日志文件信息
 type LogFile struct {
-	Path    string `json:"path"`
-	Name    string `json:"name"`
-	Size    int64  `json:"size"`
-	ModTime string `json:"mod_time"`
+	Path      string `json:"path"`      // 相对路径
+	Name      string `json:"name"`      // 文件名
+	FullPath  string `json:"full_path"` // 完整文件路径
+	Directory string `json:"directory"` // 所属目录
+	Size      int64  `json:"size"`
+	ModTime   string `json:"mod_time"`
 }
 
 // GetLogFiles 获取日志文件列表
@@ -54,6 +56,7 @@ func GetLogFiles(c *gin.Context) {
 		// 获取相对于日志目录的路径
 		var relPath string
 		var baseDir string
+		var directory string
 
 		// 确定文件所属的日志目录
 		if len(cfg.Logs.Directories) > 0 {
@@ -78,25 +81,40 @@ func GetLogFiles(c *gin.Context) {
 				// 如果无法获取相对路径，使用文件名
 				relPath = filepath.Base(file)
 			}
+
+			// 获取目录部分
+			if strings.Contains(relPath, string(filepath.Separator)) {
+				directory = filepath.Dir(relPath)
+			} else {
+				directory = "根目录"
+			}
 		} else {
 			// 如果无法确定基础目录，使用文件名
 			relPath = filepath.Base(file)
+			directory = "未知目录"
 		}
 
 		logFile := LogFile{
-			Path:    relPath, // 使用相对路径
-			Name:    filepath.Base(file),
-			Size:    info.Size(),
-			ModTime: info.ModTime().Format("2006-01-02 15:04:05"),
+			Path:      relPath, // 使用相对路径
+			Name:      filepath.Base(file),
+			FullPath:  file, // 完整文件路径
+			Directory: directory,
+			Size:      info.Size(),
+			ModTime:   info.ModTime().Format("2006-01-02 15:04:05"),
 		}
 
 		fmt.Printf("处理文件: %+v\n", logFile)
 		logFiles = append(logFiles, logFile)
 	}
 
-	// 按修改时间倒序排序
+	// 按目录和文件名排序
 	sort.Slice(logFiles, func(i, j int) bool {
-		return logFiles[i].ModTime > logFiles[j].ModTime
+		// 首先按目录排序
+		if logFiles[i].Directory != logFiles[j].Directory {
+			return logFiles[i].Directory < logFiles[j].Directory
+		}
+		// 目录相同时按文件名排序
+		return logFiles[i].Name < logFiles[j].Name
 	})
 
 	fmt.Printf("最终返回的文件列表: %+v\n", logFiles)

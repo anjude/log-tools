@@ -98,17 +98,107 @@
         .file-item {
             cursor: pointer;
             transition: all 0.2s ease;
-            padding: 8px;
+            padding: 8px 10px;
             border-radius: 4px;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
+            border: 1px solid transparent;
+            white-space: nowrap; /* 防止换行 */
+            overflow: hidden;
         }
         .file-item:hover {
             background-color: #f8f9fa;
-            transform: translateX(3px);
+            transform: translateX(2px);
+            border-color: #dee2e6;
         }
         .file-item.active {
             background-color: #e3f2fd;
             border-left: 3px solid #2196f3;
+        }
+        .directory-header {
+            font-weight: 600;
+            color: #495057;
+            padding: 4px 0;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 8px;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #212529;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+        .file-info {
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .file-info .badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            flex-shrink: 0;
+        }
+        .file-time {
+            color: #6c757d;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        /* 文件路径显示样式 */
+        .file-path-info {
+            color: #6c757d;
+            font-size: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+            display: inline-block;
+            vertical-align: bottom;
+        }
+        /* 优化文件项的整体布局 */
+        .file-item .file-info-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .file-item .file-name-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .file-item .file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+        /* 确保文件信息在一行内显示 */
+        .file-item .file-info > * {
+            flex-shrink: 0;
+        }
+        .file-item .file-info .text-muted.small {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #fileSearchInput {
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        #fileSearchInput:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .no-results {
+            font-size: 12px;
+            color: #6c757d;
+            padding: 10px;
         }
         .loading {
             text-align: center;
@@ -139,7 +229,7 @@
             padding: 6px 12px;
         }
         .container {
-            max-width: 1400px;
+            max-width: 1600px; /* 增加容器最大宽度 */
         }
         .mt-4 {
             margin-top: 1rem !important;
@@ -149,6 +239,100 @@
         }
         .mt-3 {
             margin-top: 0.75rem !important;
+        }
+        /* 减少左右边距 */
+        .container {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+        /* 增加日志文件列表宽度 */
+        .col-md-3 {
+            flex: 0 0 auto;
+            width: 28%; /* 稍微增加宽度 */
+        }
+        .col-md-9 {
+            flex: 0 0 auto;
+            width: 72%; /* 相应减少宽度 */
+        }
+        /* 在小屏幕上调整布局 */
+        @media (max-width: 1200px) {
+            .col-md-3 {
+                width: 30%;
+            }
+            .col-md-9 {
+                width: 70%;
+            }
+        }
+        @media (max-width: 768px) {
+            .col-md-3 {
+                width: 100%;
+                margin-bottom: 15px;
+            }
+            .col-md-9 {
+                width: 100%;
+            }
+            .container {
+                padding-left: 5px;
+                padding-right: 5px;
+            }
+        }
+        /* 优化文件项布局，确保一行显示 */
+        .file-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 8px 10px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            border: 1px solid transparent;
+            white-space: nowrap; /* 防止换行 */
+            overflow: hidden;
+        }
+        .file-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(2px);
+            border-color: #dee2e6;
+        }
+        .file-item.active {
+            background-color: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+        /* 文件信息布局优化 */
+        .file-info-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            min-width: 0; /* 允许收缩 */
+        }
+        .file-name-section {
+            flex: 1;
+            min-width: 0; /* 允许收缩 */
+            overflow: hidden;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #212529;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+        .file-info {
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .file-info .badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            flex-shrink: 0;
+        }
+        .file-time {
+            color: #6c757d;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .highlight {
             background-color: #fff3cd;
@@ -258,6 +442,11 @@
                         </h6>
                     </div>
                     <div class="card-body">
+                        <!-- 文件搜索框 -->
+                        <div class="mb-3">
+                            <input type="text" class="form-control form-control-sm" id="fileSearchInput" 
+                                   placeholder="搜索文件..." oninput="filterFiles()">
+                        </div>
                         <div id="fileList" class="loading">
                             <i class="bi bi-arrow-clockwise spin"></i> 加载中...
                         </div>
@@ -348,6 +537,8 @@
             checkAuth();
             loadLogFiles();
             loadSearchConfig();
+            // 尝试恢复上次选择的文件状态
+            restoreFileSelectionState();
         });
 
         // 检查认证状态
@@ -471,23 +662,36 @@
             }
             
             let html = '';
+            let currentDirectory = '';
+            
             files.forEach(file => {
                 if (file && file.path && file.name) {
                     const size = formatFileSize(file.size || 0);
                     const modTime = file.mod_time || '未知时间';
-                    const directory = file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : '根目录';
+                    const directory = file.directory || '根目录';
+                    const fullPath = file.full_path || file.path;
+                    
+                    // 如果是新目录，添加目录标题
+                    if (directory !== currentDirectory) {
+                        currentDirectory = directory;
+                        html += `<div class="directory-header text-muted small mb-2"><i class="bi bi-folder"></i> ${directory}</div>`;
+                    }
+                    
                     console.log('处理文件:', file);
                     html += `
-                        <div class="file-item" onclick="selectFile('${file.path}', event)">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>${file.name}</strong>
-                                    <br>
-                                    <small class="text-muted">${modTime}</small>
-                                    <br>
-                                    <small class="text-info">${directory}</small>
+                        <div class="file-item" onclick="selectFile('${file.path}', event)" title="${fullPath}">
+                            <div class="file-info-container">
+                                <div class="file-name-section">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-file-text text-primary me-2"></i>
+                                        <span class="file-name">${file.name}</span>
+                                    </div>
+                                    <div class="file-info">
+                                        <span class="file-time">${modTime}</span>
+                                        <span class="badge bg-light text-dark">${size}</span>
+                                        <span class="text-muted small file-path-info" title="${file.path}">${file.path}</span>
+                                    </div>
                                 </div>
-                                <span class="badge bg-secondary">${size}</span>
                             </div>
                         </div>
                     `;
@@ -496,20 +700,17 @@
             
             fileList.innerHTML = html;
             
-            // 自动选择第一个文件
-            if (files.length > 0 && !currentFile) {
-                const firstFile = files[0];
-                if (firstFile && firstFile.path) {
-                    console.log('自动选择第一个文件:', firstFile.path);
-                    selectFile(firstFile.path, null);
-                }
-            }
+            // 尝试恢复上次选择的文件
+            restoreLastSelectedFile(files);
         }
 
         // 选择文件
         function selectFile(filePath, event) {
             console.log('选择文件:', filePath);
             currentFile = filePath;
+            
+            // 保存选择的文件到本地存储
+            localStorage.setItem('lastSelectedFile', filePath);
             
             // 更新选中状态
             document.querySelectorAll('.file-item').forEach(item => {
@@ -843,6 +1044,97 @@
             });
             
             logContent.innerHTML = html;
+        }
+
+        // 文件搜索过滤
+        function filterFiles() {
+            const searchInput = document.getElementById('fileSearchInput');
+            const fileList = document.getElementById('fileList');
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                // 如果搜索框为空，显示所有文件
+                Array.from(fileList.children).forEach(item => {
+                    item.style.display = 'block';
+                });
+                return;
+            }
+            
+            const items = Array.from(fileList.children);
+            let hasVisibleFiles = false;
+            
+            items.forEach(item => {
+                if (item.classList.contains('directory-header')) {
+                    // 处理目录标题
+                    const directoryName = item.textContent.toLowerCase();
+                    const isMatch = directoryName.includes(searchTerm);
+                    item.style.display = isMatch ? 'block' : 'none';
+                } else if (item.classList.contains('file-item')) {
+                    // 处理文件项
+                    const fileName = item.querySelector('.file-name')?.textContent.toLowerCase() || '';
+                    const filePath = item.title.toLowerCase(); // 完整路径
+                    const relativePath = item.querySelector('.text-muted.small')?.textContent.toLowerCase() || '';
+                    
+                    // 搜索文件名、完整路径和相对路径
+                    const isMatch = fileName.includes(searchTerm) || 
+                                   filePath.includes(searchTerm) || 
+                                   relativePath.includes(searchTerm);
+                    
+                    item.style.display = isMatch ? 'block' : 'none';
+                    
+                    if (isMatch) {
+                        hasVisibleFiles = true;
+                    }
+                }
+            });
+            
+            // 如果没有匹配的文件，显示提示信息
+            if (!hasVisibleFiles) {
+                const noResults = fileList.querySelector('.no-results');
+                if (!noResults) {
+                    const noResultsDiv = document.createElement('div');
+                    noResultsDiv.className = 'no-results text-muted text-center mt-3';
+                    noResultsDiv.innerHTML = `<i class="bi bi-search"></i> 没有找到匹配的文件`;
+                    fileList.appendChild(noResultsDiv);
+                }
+            } else {
+                // 移除"没有结果"提示
+                const noResults = fileList.querySelector('.no-results');
+                if (noResults) {
+                    noResults.remove();
+                }
+            }
+        }
+
+        // 尝试恢复上次选择的文件
+        function restoreLastSelectedFile(files) {
+            const lastSelectedFile = localStorage.getItem('lastSelectedFile');
+            if (lastSelectedFile) {
+                const foundFile = files.find(f => f.path === lastSelectedFile);
+                if (foundFile) {
+                    console.log('恢复上次选择的文件:', foundFile.path);
+                    selectFile(foundFile.path, null);
+                } else {
+                    console.warn('上次选择的文件不存在，重新选择第一个文件');
+                    if (files.length > 0) {
+                        selectFile(files[0].path, null);
+                    }
+                }
+            } else {
+                console.log('没有上次选择的文件，自动选择第一个文件');
+                if (files.length > 0) {
+                    selectFile(files[0].path, null);
+                }
+            }
+        }
+
+        // 恢复文件选择状态
+        function restoreFileSelectionState() {
+            const lastSelectedFile = localStorage.getItem('lastSelectedFile');
+            if (lastSelectedFile) {
+                console.log('准备恢复上次选择的文件:', lastSelectedFile);
+                // 这个函数会在文件列表加载完成后被调用
+            }
         }
 
         // 登出
