@@ -17,6 +17,13 @@ logs:
     - "./logs"
   # 兼容旧版本，单个目录配置（如果设置了directories，此配置将被忽略）
   # directory: "./logs"
+  # 确定的日志文件路径列表（支持相对路径和绝对路径，会显示在文件列表最前边）
+  fixed_files:
+    - "./logs/data.log"
+    # 支持绝对路径示例（取消注释并修改为实际路径）
+    # - "/var/log/nginx/access.log"
+    # - "/var/log/nginx/error.log"
+    # - "/var/log/mysql/mysql.log"
   # 日志文件名正则匹配模式，支持日期等变量
   pattern: ".*\\.log$"
   # 默认显示日志条数
