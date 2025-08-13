@@ -98,7 +98,7 @@
         .file-item {
             cursor: pointer;
             transition: all 0.2s ease;
-            padding: 8px 10px;
+            padding: 8px 12px; /* 增加左右内边距，更好地利用增加的空间 */
             border-radius: 4px;
             margin-bottom: 4px;
             border: 1px solid transparent;
@@ -128,12 +128,13 @@
             overflow: hidden;
             text-overflow: ellipsis;
             display: block;
+            max-width: 300px; /* 增加文件名最大宽度，更好地利用增加的空间 */
         }
         .file-info {
             margin-top: 2px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px; /* 增加间距，让路径信息有更多显示空间 */
             font-size: 11px;
         }
         .file-info .badge {
@@ -146,35 +147,38 @@
             white-space: nowrap;
             flex-shrink: 0;
         }
-        /* 文件路径显示样式 */
+        /* 文件路径显示样式 - 增加宽度以显示更长的路径信息 */
         .file-path-info {
             color: #6c757d;
             font-size: 10px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 200px;
+            max-width: 320px; /* 进一步增加宽度以显示更长的路径信息 */
             display: inline-block;
             vertical-align: bottom;
         }
-        /* 优化文件项的整体布局 */
+        /* 优化文件项的整体布局 - 更好地利用增加的空间 */
         .file-item .file-info-container {
             display: flex;
             flex-direction: column;
             gap: 4px;
+            width: 100%;
         }
         .file-item .file-name-section {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px; /* 增加间距，让路径信息有更多显示空间 */
+            width: 100%;
         }
         .file-item .file-info {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px; /* 增加间距，让路径信息有更多显示空间 */
             flex-wrap: nowrap;
+            width: 100%;
         }
-        /* 确保文件信息在一行内显示 */
+        /* 确保文件信息在一行内显示，优化空间利用 */
         .file-item .file-info > * {
             flex-shrink: 0;
         }
@@ -260,7 +264,7 @@
             padding: 6px 12px;
         }
         .container {
-            max-width: 1600px; /* 增加容器最大宽度 */
+            max-width: 1800px; /* 进一步增加容器最大宽度，减少左侧空白 */
         }
         .mt-4 {
             margin-top: 1rem !important;
@@ -271,27 +275,27 @@
         .mt-3 {
             margin-top: 0.75rem !important;
         }
-        /* 减少左右边距 */
+        /* 进一步减少左右边距，让日志文件栏有更多空间 */
         .container {
-            padding-left: 10px;
-            padding-right: 10px;
+            padding-left: 5px;
+            padding-right: 5px;
         }
-        /* 增加日志文件列表宽度 */
+        /* 增加日志文件列表宽度，减少左侧空白 */
         .col-md-3 {
             flex: 0 0 auto;
-            width: 28%; /* 稍微增加宽度 */
+            width: 35%; /* 增加宽度，减少左侧空白 */
         }
         .col-md-9 {
             flex: 0 0 auto;
-            width: 72%; /* 相应减少宽度 */
+            width: 65%; /* 相应减少宽度 */
         }
         /* 在小屏幕上调整布局 */
         @media (max-width: 1200px) {
             .col-md-3 {
-                width: 30%;
+                width: 38%;
             }
             .col-md-9 {
-                width: 70%;
+                width: 62%;
             }
         }
         @media (max-width: 768px) {
@@ -311,7 +315,7 @@
         .file-item {
             cursor: pointer;
             transition: all 0.2s ease;
-            padding: 8px 10px;
+            padding: 8px 12px; /* 增加左右内边距，更好地利用增加的空间 */
             border-radius: 4px;
             margin-bottom: 4px;
             border: 1px solid transparent;
@@ -346,12 +350,13 @@
             overflow: hidden;
             text-overflow: ellipsis;
             display: block;
+            max-width: 300px; /* 增加文件名最大宽度，更好地利用增加的空间 */
         }
         .file-info {
             margin-top: 2px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px; /* 增加间距，让路径信息有更多显示空间 */
             font-size: 11px;
         }
         .file-info .badge {
