@@ -191,10 +191,10 @@ func GetLogContent(c *gin.Context) {
 
 // SearchRequest 搜索请求结构
 type SearchRequest struct {
-	File    string `json:"file" binding:"required"`
-	Pattern string `json:"pattern" binding:"required"`
-	Reverse bool   `json:"reverse"`
-	Lines   int    `json:"lines"`
+	File    string `json:"file" binding:"required"`    // 要搜索的文件路径
+	Pattern string `json:"pattern" binding:"required"` // 搜索模式
+	Reverse bool   `json:"reverse"`                    // 是否倒序搜索
+	Lines   int    `json:"lines"`                      // 限制返回结果的最大数量
 }
 
 // SearchResult 搜索结果结构
@@ -215,7 +215,7 @@ func SearchLogs(c *gin.Context) {
 	}
 
 	// 添加调试信息
-	fmt.Printf("搜索请求: 文件=%s, 模式=%s, 倒序=%v, 行数=%d\n", req.File, req.Pattern, req.Reverse, req.Lines)
+	fmt.Printf("搜索请求: 文件=%s, 模式=%s, 倒序=%v, 最大返回结果数=%d\n", req.File, req.Pattern, req.Reverse, req.Lines)
 
 	// 验证文件路径安全性
 	absFilePath, err := validateFilePath(req.File)
@@ -246,6 +246,7 @@ func SearchLogs(c *gin.Context) {
 	}
 
 	// 搜索日志
+	// req.Lines参数用于限制返回结果的最大数量，搜索会在整个文件范围内进行
 	results, err := searchInFileAdvanced(absFilePath, searchQuery, config.GetConfig().Logs.MaxSearchResults, req.Reverse, req.Lines)
 	if err != nil {
 		fmt.Printf("搜索文件失败: %v\n", err)
@@ -469,6 +470,7 @@ func isLogicOperator(text string) bool {
 }
 
 // searchInFileAdvanced 高级文件搜索
+// maxLines参数用于限制返回结果的最大数量，不再限制搜索范围
 func searchInFileAdvanced(filePath string, query *SearchQuery, maxResults int, reverse bool, maxLines int) ([]SearchResult, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -491,14 +493,8 @@ func searchInFileAdvanced(filePath string, query *SearchQuery, maxResults int, r
 		return nil, err
 	}
 
-	// 限制搜索行数
-	if maxLines > 0 && len(allLines) > maxLines {
-		if reverse {
-			allLines = allLines[len(allLines)-maxLines:]
-		} else {
-			allLines = allLines[:maxLines]
-		}
-	}
+	// 注意：maxLines参数现在用于限制返回结果数量，不再限制搜索范围
+	// 搜索会在整个文件范围内进行
 
 	// 搜索匹配的行
 	for i, line := range allLines {
@@ -514,7 +510,8 @@ func searchInFileAdvanced(filePath string, query *SearchQuery, maxResults int, r
 				File:       filePath,
 			})
 
-			if len(results) >= maxResults {
+			// 使用maxLines参数限制返回结果数量，而不是maxResults
+			if maxLines > 0 && len(results) >= maxLines {
 				break
 			}
 		}
